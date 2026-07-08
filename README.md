@@ -25,17 +25,15 @@ Unlike static slide decks or mocked demos, this project runs **live LLM inferenc
 
 ---
 
-## A+ Lab — What Changed (v3.1)
+## Agentic Security Architecture
 
 OrchestraACME targets **workflow-realistic** agentic security validation, not prompt-only red teaming.
 
-| Today (good) | A+ (this build) |
-|--------------|-----------------|
-| Attacks are mostly strings sent to one agent | Attacks exploit **tools, RAG, memory, A2A, orchestration** surfaces |
-| Defense is regex middleware | Defense is **enforced in code paths** (MCP gateway, memory policy, A2A verifier, orchestration guard) + regex output inspection |
-| Framework mapping is lookup enrichment | Framework mapping is **measurable control evidence** (NIST pass/fail per scenario) |
-| Splunk shows events | Splunk proves **detection efficacy** (coverage %, MTTD, chain completeness, control attestation) |
-| 45 techniques = catalog completeness | 45 techniques = **curated emerging threat library** with reproducible kill chains |
+- Attacks exploit **tools, RAG, memory, A2A, and orchestration** surfaces — not just strings sent to one agent
+- Defense is **enforced in code paths** (MCP gateway, memory policy, A2A verifier, orchestration guard) plus regex output inspection
+- Framework mapping produces **measurable control evidence** (NIST pass/fail per scenario)
+- Splunk tracks **detection efficacy** (coverage %, MTTD, chain completeness, control attestation)
+- **45 techniques** form a curated emerging-threat library with reproducible kill chains
 
 **Eight agentic threat surfaces** (2025–2026) map to Top 10 lab scenarios — see [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md).
 
@@ -277,7 +275,7 @@ Use this lab to:
 
 ## Table of Contents
 
-1. [A+ Lab — What Changed](#a-lab--what-changed-v31)
+1. [Agentic Security Architecture](#agentic-security-architecture)
 2. [How Everything Works (Plain Language)](#how-everything-works-plain-language)
 2. [What This Project Is — and Is Not](#what-this-project-is--and-is-not)
 3. [Honest Limitations](#honest-limitations)
@@ -535,7 +533,7 @@ Full step-by-step: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.
 
 ### 4. Splunk Compliance Apps
 
-**Primary (v3.1):** `splunk_app/splunk_compliance_app/`
+**Primary:** `splunk_app/splunk_compliance_app/`
 
 - Index: `acme_agentic_telemetry` · Sourcetype: `otel:agentic:json`
 - **Eight dashboards:** overview, **technique coverage matrix**, **threat hunting workbench**, **actor chain narrative**, MITRE ATLAS heatmap, kill-chain timeline, NIST RMF, dataset export

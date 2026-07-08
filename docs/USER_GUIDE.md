@@ -765,5 +765,5 @@ http://localhost:5000 — normal loan through **Run Through All Agents** before 
 ## Learn more
 
 - [THREAT_SURFACES.md](THREAT_SURFACES.md) — surfaces vs prompts; framework crosswalk
-- [README.md](../README.md) — architecture, A+ lab modules, honest limits
+- [README.md](../README.md) — architecture, workflow guard modules, honest limits
 - [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) — Splunk install
