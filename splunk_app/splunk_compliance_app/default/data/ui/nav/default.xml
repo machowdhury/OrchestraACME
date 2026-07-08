@@ -1,0 +1,8 @@
+<nav search_view="search" color="#0d47a1">
+  <view name="compliance_overview" default="true" label="Overview"/>
+  <view name="mitre_atlas_heatmap" label="MITRE ATLAS Heatmap"/>
+  <view name="killchain_timeline" label="Kill-Chain Timeline"/>
+  <view name="nist_rmf_compliance" label="NIST AI RMF Scoring"/>
+  <view name="dataset_export" label="Dataset Export"/>
+  <view name="search" label="Search"/>
+</nav>

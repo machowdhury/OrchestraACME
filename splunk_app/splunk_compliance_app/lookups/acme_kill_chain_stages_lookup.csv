@@ -1,0 +1,25 @@
+chain_id,chain_name,scenario_family,stage_num,stage_name,technique_id,total_stages,cvss_score
+KC-A001,Silent Data Harvest,A,1,OSINT Model Fingerprinting,AML.T0005,5,3.1
+KC-A001,Silent Data Harvest,A,2,API Probe for Feature Mapping,AML.T0000,5,5.3
+KC-A001,Silent Data Harvest,A,3,System Prompt Extraction Attempt,AML.T0003,5,6.5
+KC-A001,Silent Data Harvest,A,4,RAG Knowledge Base Discovery,AML.T0037,5,7.4
+KC-A001,Silent Data Harvest,A,5,Systematic Embedding Space Reconstruction,AML.T0038,5,8.8
+KC-B001,Trojan Model Operation,B,1,Training Data Poisoning,AML.T0018,4,9.0
+KC-B001,Trojan Model Operation,B,2,Compromised Model Artifact in Supply Chain,AML.T0048,4,9.1
+KC-B001,Trojan Model Operation,B,3,Backdoor Activation on Trigger,AML.T0025,4,9.5
+KC-B001,Trojan Model Operation,B,4,Covert C2 Channel Established,AML.T0060,4,8.8
+KC-C001,Document-Borne Financial Fraud Chain,C,1,Malicious Payload Embedded in Loan Document,AML.T0054,5,9.0
+KC-C001,Document-Borne Financial Fraud Chain,C,2,Agent Context Window Poisoned via RAG,AML.T0055,5,8.5
+KC-C001,Document-Borne Financial Fraud Chain,C,3,Goal Hijack — Approve Fraudulent Application,AML.T0051,5,9.3
+KC-C001,Document-Borne Financial Fraud Chain,C,4,Privilege Escalation to Payment Tool,AML.T0050,5,9.0
+KC-C001,Document-Borne Financial Fraud Chain,C,5,Data Exfiltration via Model Output,AML.T0031,5,8.8
+KC-D001,Rogue Agent Cascade,D,1,Agent Behavioral Drift Detected,AML.T0026,5,9.0
+KC-D001,Rogue Agent Cascade,D,2,Resource Exhaustion — Recursive Delegation Loop,AML.T0040,5,7.5
+KC-D001,Rogue Agent Cascade,D,3,Cascading Failure Propagates to Downstream Agents,AML.T0029,5,7.5
+KC-D001,Rogue Agent Cascade,D,4,Audit Log Gaps During Cascading Failure,AML.T0052,5,8.4
+KC-D001,Rogue Agent Cascade,D,5,Rogue Agent Establishing Autonomous C2,AML.T0060,5,8.8
+KC-E001,Zero-Trust Identity Fracture,E,1,Agent Tool Schema Enumeration,AML.T0043,5,5.8
+KC-E001,Zero-Trust Identity Fracture,E,2,Cryptographic Passport Spoofing — DID Signature Forgery,AML.T0058,5,9.2
+KC-E001,Zero-Trust Identity Fracture,E,3,Session Smuggling Across Trust Boundary,AML.T0045,5,8.6
+KC-E001,Zero-Trust Identity Fracture,E,4,Bulk Data Collection via Privileged Agent Tools,AML.T0036,5,8.2
+KC-E001,Zero-Trust Identity Fracture,E,5,Exfiltration via Encoded Model Output,AML.T0031,5,8.8

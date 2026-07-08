@@ -1,0 +1,59 @@
+# =============================================================================
+# ACME Banking Security Testbed — External Splunk Override
+# =============================================================================
+# Apply this file ON TOP of docker-compose.yml when targeting an external
+# Splunk Cloud or on-premises Splunk Enterprise instance.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d
+#
+# What this override does:
+#   1. Removes the local 'splunk' container entirely (sets scale: 0 equivalent)
+#   2. Removes the otel_collector's depends_on: splunk (avoids a missing-service error)
+#   3. Confirms all HEC settings are sourced from .env (no local container needed)
+#
+# Before running, ensure your .env has these set correctly:
+#   SPLUNK_HEC_ENDPOINT=https://http-inputs-<stack>.splunkcloud.com:443/services/collector/event
+#   SPLUNK_HEC_TOKEN=<your_token>
+#   SPLUNK_HEC_TLS_SKIP_VERIFY=false
+# =============================================================================
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Override: Remove local Splunk container entirely.
+  # Docker Compose does not support fully deleting a service in an override,
+  # but setting 'deploy.replicas: 0' and clearing ports/volumes achieves the
+  # same effect: the container is defined but never started.
+  # ---------------------------------------------------------------------------
+  splunk:
+    # Override the profiles list to a tag that is never activated,
+    # effectively disabling the service without deleting the stanza.
+    profiles:
+      - disabled-external-mode-only
+    deploy:
+      replicas: 0
+
+  # ---------------------------------------------------------------------------
+  # Override: Remove the depends_on: splunk from the OTel Collector.
+  # In external mode, there is no local Splunk container to wait for.
+  # The collector starts immediately and connects to the external HEC endpoint.
+  # ---------------------------------------------------------------------------
+  otel_collector:
+    depends_on: []
+    # Explicitly re-confirm all HEC env vars flow from .env (no changes needed,
+    # but listed here for operator clarity when reviewing the override file).
+    environment:
+      - SPLUNK_HEC_ENDPOINT=${SPLUNK_HEC_ENDPOINT}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
+      - SPLUNK_HEC_INDEX=${SPLUNK_HEC_INDEX}
+      - SPLUNK_HEC_SOURCETYPE=${SPLUNK_HEC_SOURCETYPE}
+      - SPLUNK_HEC_SOURCE=${SPLUNK_HEC_SOURCE}
+      - SPLUNK_HEC_TLS_SKIP_VERIFY=${SPLUNK_HEC_TLS_SKIP_VERIFY}
+      - OTEL_BATCH_SIZE=${OTEL_BATCH_SIZE}
+      - OTEL_BATCH_TIMEOUT=${OTEL_BATCH_TIMEOUT}
+      - OTEL_BATCH_MAX_SIZE=${OTEL_BATCH_MAX_SIZE}
+      - OTEL_MEMORY_LIMIT_MIB=${OTEL_MEMORY_LIMIT_MIB}
+      - OTEL_MEMORY_SPIKE_MIB=${OTEL_MEMORY_SPIKE_MIB}

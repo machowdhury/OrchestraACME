@@ -1,0 +1,200 @@
+<dashboard version="1.1" theme="dark">
+  <label>Dataset Export — HuggingFace Readiness</label>
+  <description>Monitor dataset volume, schema completeness, and export readiness for HuggingFace-compatible JSONL export matching the emmanuelgjr/genai-incidents schema.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="false">
+      <label>Dataset Window</label>
+      <default>
+        <earliest>-30d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Total Events in Dataset Window</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+| stats count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="rangeValues">[100,500]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Unique ATLAS Techniques</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.technique_id=AML.*
+| stats dc(framework.technique_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="rangeValues">[5,20]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Kill-Chain Incidents Recorded</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats dc(incident_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Export Readiness</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+| stats count AS total_events, dc(framework.technique_id) AS unique_techniques
+| eval readiness=case(total_events>1000 AND unique_techniques>20,"READY",total_events>100,"PARTIAL",1=1,"INSUFFICIENT")
+| fields readiness</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>Event Volume Over Time</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+| timechart count by testbed_mode span=1d
+| fillnull value=0</query>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">["0x00b4ff","0x00ff9d","0xf06595"]</option>
+        <option name="charting.axisTitleX.text">Date</option>
+        <option name="charting.axisTitleY.text">Events</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Schema Field Completeness</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+| eval has_technique=if(isnotnull(framework.technique_id) AND framework.technique_id!="",1,0)
+| eval has_severity=if(isnotnull(framework.severity) AND framework.severity!="",1,0)
+| eval has_cvss=if(isnotnull(framework.cvss_score) AND framework.cvss_score!="",1,0)
+| eval has_owasp_llm=if(isnotnull(framework.owasp_llm) AND framework.owasp_llm!="",1,0)
+| eval has_owasp_asi=if(isnotnull(framework.owasp_asi) AND framework.owasp_asi!="",1,0)
+| eval has_maestro=if(isnotnull(framework.maestro_layers) AND framework.maestro_layers!="",1,0)
+| eval has_nist=if(isnotnull(framework.nist_ai_rmf) AND framework.nist_ai_rmf!="",1,0)
+| eval has_incident_id=if(isnotnull(incident_id) AND incident_id!="",1,0)
+| stats avg(has_technique) AS technique_pct, avg(has_severity) AS severity_pct,
+  avg(has_cvss) AS cvss_pct, avg(has_owasp_llm) AS owasp_llm_pct,
+  avg(has_owasp_asi) AS owasp_asi_pct, avg(has_maestro) AS maestro_pct,
+  avg(has_nist) AS nist_pct, avg(has_incident_id) AS incident_id_pct
+| eval technique_pct=round(technique_pct*100,1)
+| eval severity_pct=round(severity_pct*100,1)
+| eval cvss_pct=round(cvss_pct*100,1)
+| eval owasp_llm_pct=round(owasp_llm_pct*100,1)
+| eval owasp_asi_pct=round(owasp_asi_pct*100,1)
+| eval maestro_pct=round(maestro_pct*100,1)
+| eval nist_pct=round(nist_pct*100,1)
+| eval incident_id_pct=round(incident_id_pct*100,1)
+| transpose
+| rename column AS "Schema Field", "row 1" AS "Completeness %"</query>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.seriesColors">["0x00ff9d"]</option>
+        <option name="charting.axisTitleX.text">Completeness (%)</option>
+        <option name="charting.axisX.minimumNumber">0</option>
+        <option name="charting.axisX.maximumNumber">100</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Severity Breakdown — Dataset Distribution</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.severity=*
+| stats count AS events, dc(framework.technique_id) AS techniques, dc(incident_id) AS incidents
+  BY framework.severity
+| eval pct=round(events/total*100,1)
+| appendcols [search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ | stats count AS total | fields total]
+| eval pct=round(events/total*100,1)
+| sort case(framework.severity,"Critical",1,"High",2,"Medium",3,"Low",4)
+| table framework.severity events pct techniques incidents
+| rename framework.severity AS "Severity", events AS "Events", pct AS "% of Dataset",
+  techniques AS "Unique Techniques", incidents AS "Kill-Chain Incidents"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <html>
+        <![CDATA[
+        <div style="background:#0b1120;border:1px solid #1e2a4a;border-radius:8px;padding:20px;font-family:monospace">
+          <div style="color:#7986cb;font-size:.75rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px">// HuggingFace Export — Banking App API</div>
+
+          <div style="margin-bottom:14px">
+            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export Synthetic Dataset (69 records from taxonomy)</div>
+            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
+              POST http://localhost:5000/api/v1/dataset/export/synthetic
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px">
+            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export Splunk Lookup CSV</div>
+            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
+              POST http://localhost:5000/api/v1/dataset/export/lookup-csv
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px">
+            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export HuggingFace Dataset Card</div>
+            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
+              POST http://localhost:5000/api/v1/dataset/export/dataset-card
+            </div>
+          </div>
+
+          <div>
+            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Dataset Schema (HF-compatible fields)</div>
+            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00b4ff">
+              GET http://localhost:5000/api/v1/dataset/schema
+            </div>
+          </div>
+
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #1e2a4a">
+            <div style="color:#546e7a;font-size:.68rem">Compatible with: emmanuelgjr/genai-incidents schema v2026.05</div>
+            <div style="color:#546e7a;font-size:.68rem">Output: /var/log/defenseclaw/acme_synthetic_dataset.jsonl</div>
+          </div>
+        </div>
+        ]]>
+      </html>
+    </panel>
+  </row>
+
+</dashboard>

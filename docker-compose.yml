@@ -1,230 +1,185 @@
-# =============================================================================
-# OrchestraACME Multi-Agent Container Range
-# Principal DevSecOps Systems Engineering — Lab Stack Definition
-# =============================================================================
-#
-# All services communicate exclusively over the internal shared bridge network
-# 'acme-sec-net'. No service should bind to host interfaces beyond the explicit
-# port mappings defined below unless additional exposure is intentionally added.
-#
-# Quick Start:
-#   docker compose up -d
-#
-# Splunk Toggle:
-#   - LOCAL (default):  Keep the 'splunk' service block uncommented below.
-#   - EXTERNAL/CLOUD:   Comment out the entire 'splunk' service block, then
-#                       switch the otel-collector exporter in
-#                       ./config/otel-collector-config.yaml to Option B.
-# =============================================================================
+version: "3.9"
 
-name: orchestra-acme
+# =============================================================================
+# OrchestraACME — Live AI Security Range
+# 5-service mesh: banking_app | attack_panel | otel_collector | ollama | splunk
+#
+# SPLUNK MODE (set in .env):
+#   SPLUNK_MODE=local    → runs Splunk as a container (default)
+#   SPLUNK_MODE=external → skips Splunk container; OTel ships to your own instance
+#
+# Local mode:
+#   docker compose --profile local up --build -d
+#
+# External Splunk mode:
+#   docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d
+# =============================================================================
 
 networks:
-  acme-sec-net:
-    name: acme-sec-net
+  acme_mesh:
     driver: bridge
-    internal: false
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  shared_telemetry:
+    driver: local
+  ollama_models:
+    driver: local
 
 services:
 
   # ---------------------------------------------------------------------------
-  # Ollama — Local LLM Inference Engine
-  # Internal Port: 11434 (not published to host by default)
-  # On container creation, automatically pulls the lightweight llama3.2:1b model.
+  # OLLAMA — Local LLM runtime, auto-pulls llama3.2:1b on first start
   # ---------------------------------------------------------------------------
   ollama:
     image: ollama/ollama:latest
-    container_name: orchestra-acme-ollama
-    restart: unless-stopped
+    container_name: acme_ollama
     networks:
-      - acme-sec-net
+      - acme_mesh
+    ports:
+      - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-    # Inline entrypoint initialization block:
-    #   1. Start the Ollama API server in the background
-    #   2. Wait for the daemon to become ready
-    #   3. Pull the lightweight llama3.2:1b model on first creation
-    #   4. Block on the background server process to keep the container alive
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        echo "[orchestra-acme/ollama] Starting Ollama inference daemon..."
-        ollama serve &
-        OLLAMA_PID=$$!
-
-        echo "[orchestra-acme/ollama] Waiting for Ollama API readiness on :11434..."
-        READY=0
-        for i in $$(seq 1 60); do
-          if ollama list > /dev/null 2>&1; then
-            READY=1
-            break
-          fi
-          sleep 2
-        done
-
-        if [ "$$READY" -ne 1 ]; then
-          echo "[orchestra-acme/ollama] ERROR: Ollama API did not become ready in time."
-          kill "$$OLLAMA_PID" 2>/dev/null || true
-          exit 1
-        fi
-
-        echo "[orchestra-acme/ollama] Pulling lightweight model: llama3.2:1b"
-        ollama pull llama3.2:1b
-
-        echo "[orchestra-acme/ollama] Model pull complete. Ollama is ready."
-        wait "$$OLLAMA_PID"
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
+      - ./scripts/ollama_init.sh:/ollama_init.sh:ro
+    entrypoint: ["/bin/bash", "/ollama_init.sh"]
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=1
     deploy:
       resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    # GPU reservation is optional; remove the 'deploy' block above on CPU-only hosts.
+        limits:
+          memory: 4G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
   # ---------------------------------------------------------------------------
-  # Banking Application — Defensive Agent Target / Benign Workload
-  # Host Port: 5000 -> Container Port: 5000
+  # BANKING APP — Real 4-agent LLM loop with OTel GenAI instrumentation
   # ---------------------------------------------------------------------------
   banking_app:
     build:
       context: ./apps
-      dockerfile: Dockerfile
-    image: orchestra-acme/banking_app:latest
-    container_name: orchestra-acme-banking-app
-    restart: unless-stopped
-    command: ["python", "app_runtime.py"]
-    networks:
-      - acme-sec-net
+      dockerfile: Dockerfile.banking
+    container_name: acme_banking_app
     ports:
       - "5000:5000"
+    networks:
+      - acme_mesh
+    volumes:
+      - shared_telemetry:/var/log/defenseclaw
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel_collector:4318
-      OTEL_SERVICE_NAME: orchestra-acme-banking-app
-      OLLAMA_BASE_URL: http://ollama:11434
+      - FLASK_ENV=development
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
+      - OTEL_COLLECTOR_HTTP=http://otel_collector:4318
+      - OTEL_COLLECTOR_GRPC=otel_collector:4317
+      - OTEL_SERVICE_NAME=acme-banking-fabric
+      - OTEL_SERVICE_VERSION=3.0.0
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.namespace=acme-banking-group
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-acme-hec-token-0000-1111-2222-3333}
+      - ACME_ENV=production
+      - DEFENSECLAW_ENABLED=true
+      - CODEGUARD_ENABLED=true
     depends_on:
-      otel_collector:
-        condition: service_started
       ollama:
         condition: service_healthy
+      otel_collector:
+        condition: service_started
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:5000/health > /dev/null || curl -sf http://127.0.0.1:5000/ > /dev/null"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
       retries: 5
       start_period: 30s
 
   # ---------------------------------------------------------------------------
-  # Attack Panel — Offensive Agent / Red-Team Control Surface
-  # Host Port: 5001 -> Container Port: 5001
+  # ATTACK PANEL — Adversarial prompt injection terminal
   # ---------------------------------------------------------------------------
   attack_panel:
     build:
       context: ./apps
-      dockerfile: Dockerfile
-    image: orchestra-acme/attack_panel:latest
-    container_name: orchestra-acme-attack-panel
-    restart: unless-stopped
-    command: ["python", "exploit_ui.py"]
-    networks:
-      - acme-sec-net
+      dockerfile: Dockerfile.attack
+    container_name: acme_attack_panel
     ports:
       - "5001:5001"
+    networks:
+      - acme_mesh
+    volumes:
+      - shared_telemetry:/var/log/defenseclaw
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel_collector:4318
-      OTEL_SERVICE_NAME: orchestra-acme-attack-panel
-      BANKING_APP_URL: http://banking_app:5000
-      OLLAMA_BASE_URL: http://ollama:11434
+      - FLASK_ENV=development
+      - BANKING_APP_URL=http://banking_app:5000
     depends_on:
       banking_app:
-        condition: service_started
-      otel_collector:
-        condition: service_started
-      ollama:
         condition: service_healthy
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:5001/health > /dev/null || curl -sf http://127.0.0.1:5001/ > /dev/null"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # ---------------------------------------------------------------------------
-  # OpenTelemetry Collector — Telemetry Aggregation and Export
-  # Internal only (no host port bindings); OTLP gRPC :4317, HTTP :4318
-  # Configuration mounted from ./config/otel-collector-config.yaml
+  # OTEL COLLECTOR — Telemetry mesh backbone
   # ---------------------------------------------------------------------------
   otel_collector:
     image: otel/opentelemetry-collector-contrib:0.96.0
-    container_name: orchestra-acme-otel-collector
-    restart: unless-stopped
+    container_name: acme_otel_collector
     networks:
-      - acme-sec-net
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+      - acme_mesh
     volumes:
       - ./config/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
-    depends_on:
-      splunk:
-        condition: service_healthy
+      - shared_telemetry:/var/log/defenseclaw
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      - SPLUNK_HEC_ENDPOINT=${SPLUNK_HEC_ENDPOINT:-http://splunk:8088/services/collector/event}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-acme-hec-token-0000-1111-2222-3333}
+      - SPLUNK_HEC_INDEX=${SPLUNK_HEC_INDEX:-acme_agentic_telemetry}
+      - SPLUNK_HEC_SOURCETYPE=${SPLUNK_HEC_SOURCETYPE:-otel:agentic:json}
+      - SPLUNK_HEC_TLS_SKIP_VERIFY=${SPLUNK_HEC_TLS_SKIP_VERIFY:-true}
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:13133/ > /dev/null 2>&1"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 15s
+      timeout: 5s
       retries: 5
-      start_period: 15s
 
   # ---------------------------------------------------------------------------
-  # Splunk Enterprise — Local Telemetry Sink (DEFAULT)
-  # ---------------------------------------------------------------------------
-  # TOGGLE INSTRUCTIONS:
-  #   LOCAL INGESTION (default):
-  #     - Keep this entire 'splunk' service block ACTIVE (uncommented).
-  #     - Ensure otel-collector-config.yaml uses Option A (Local Ingestion).
-  #
-  #   EXTERNAL / SPLUNK CLOUD / CORPORATE INSTANCE:
-  #     - Comment out this ENTIRE 'splunk' service block (from 'splunk:' through
-  #       its closing healthcheck/deploy section).
-  #     - Remove or comment the 'depends_on: splunk' stanza under
-  #       'otel_collector' above.
-  #     - Switch otel-collector-config.yaml to Option B (External/Cloud).
-  #     - Provide your external HEC endpoint and token in that file.
+  # SPLUNK — Local SIEM (profile: local — skipped in external mode)
   # ---------------------------------------------------------------------------
   splunk:
-    image: splunk/splunk:9.2.1
-    container_name: orchestra-acme-splunk
-    restart: unless-stopped
-    networks:
-      - acme-sec-net
+    image: ${SPLUNK_IMAGE:-splunk/splunk:9.2.1}
+    container_name: acme_splunk
+    profiles:
+      - local
     ports:
-      - "8000:8000"   # Splunk Web UI
-      - "8088:8088"   # HTTP Event Collector (HEC)
-    environment:
-      SPLUNK_START_ARGS: "--accept-license"
-      SPLUNK_PASSWORD: "ACMEPassword2026!"
-      SPLUNK_HEC_TOKEN: "00000000-0000-4000-8000-ACMEHECLOCAL01"
-      SPLUNK_GENERAL_TERMS: "--accept-sgt-current-at-splunk-com"
+      - "8000:8000"
+      - "8088:8088"
+    networks:
+      - acme_mesh
     volumes:
-      - splunk_etc:/opt/splunk/etc
-      - splunk_var:/opt/splunk/var
+      - shared_telemetry:/var/log/defenseclaw
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_PASSWORD=${SPLUNK_PASSWORD:-ACMEPassword2026!}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_LOCAL_HEC_TOKEN:-acme-hec-token-0000-1111-2222-3333}
+      - SPLUNK_ENABLE_LISTEN=9997
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/ > /dev/null"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/en-US/account/login"]
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 180s
-
-volumes:
-  ollama_models:
-    name: orchestra-acme-ollama-models
-  splunk_etc:
-    name: orchestra-acme-splunk-etc
-  splunk_var:
-    name: orchestra-acme-splunk-var
+      start_period: 120s

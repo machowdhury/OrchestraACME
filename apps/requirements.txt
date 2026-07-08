@@ -1,5 +1,28 @@
+# =============================================================================
+# OrchestraACME v3 — Python Dependencies
+# Shared by banking_app and attack_panel containers
+# =============================================================================
+
+# Web framework
 flask==3.0.3
-requests==2.32.3
+
+# HTTP client — Ollama API calls + inter-service communication
+requests==2.31.0
+
+# OpenTelemetry — Core SDK
 opentelemetry-api==1.24.0
 opentelemetry-sdk==1.24.0
+
+# OpenTelemetry — OTLP exporters (HTTP transport for traces, metrics, logs)
 opentelemetry-exporter-otlp-proto-http==1.24.0
+opentelemetry-exporter-otlp-proto-grpc==1.24.0
+
+# OpenTelemetry — Semantic conventions (gen_ai.* attributes)
+opentelemetry-semantic-conventions==0.45b0
+
+# OpenTelemetry — Flask auto-instrumentation (adds trace context to HTTP routes)
+opentelemetry-instrumentation-flask==0.45b0
+opentelemetry-instrumentation-requests==0.45b0
+
+# Utilities
+python-dotenv==1.0.1

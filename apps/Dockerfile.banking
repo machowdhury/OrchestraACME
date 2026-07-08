@@ -1,0 +1,25 @@
+# =============================================================================
+# OrchestraACME — Banking App Container v3
+# =============================================================================
+FROM python:3.11-slim
+
+LABEL maintainer="OrchestraACME"
+LABEL description="ACME Banking Multi-Agent Fabric — Real Ollama LLM loop"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app + all sub-packages
+COPY app_runtime.py .
+COPY agents/ ./agents/
+COPY framework/ ./framework/
+
+RUN mkdir -p /var/log/defenseclaw
+
+EXPOSE 5000
+CMD ["python", "app_runtime.py"]

@@ -1,0 +1,8 @@
+layer_id,name,description,primary_threats
+L1,Foundation Models,"Base LLMs, multimodal models, embeddings, and fine-tuned variants",model poisoning|weight theft|backdoor injection|adversarial inputs
+L2,Data Operations,"Training data pipelines, RAG retrieval stores, vector databases, context assembly",training data poisoning|vector DB exfiltration|retrieval manipulation|context injection
+L3,Agent Frameworks,"Orchestration layers: LangChain, AutoGen, CrewAI, MCP, A2A protocol surfaces",prompt injection|tool schema abuse|framework misconfiguration|MCP tool escape
+L4,Agent Capabilities,"Tool integrations, API access, code execution, browser control, file system access",excessive agency|RCE via tool abuse|SSRF|capability boundary violation
+L5,Multi-Agent Systems,"Agent-to-agent communication, delegation chains, trust propagation, orchestrator/subagent topologies",A2A identity spoofing|trust chain hijack|cascading failures|session smuggling
+L6,Security & Compliance,"Policy enforcement, audit logging, compliance controls, guardrails, human-in-the-loop",guardrail bypass|audit evasion|HITL fatigue|policy drift
+L7,Agent Ecosystem,"Third-party plugins, skill/tool marketplaces, supply chain, deployment infrastructure",supply chain compromise|malicious plugin|shadow AI|model substitution

@@ -1,0 +1,212 @@
+<dashboard version="1.1" theme="dark">
+  <label>MITRE ATLAS Coverage Heatmap</label>
+  <description>Full MITRE ATLAS technique coverage map across all 16 tactics. Drill into any technique for full detail and Splunk correlation search.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="false">
+      <label>Time Range</label>
+      <default>
+        <earliest>-7d</earliest>
+        <latest>now</latest>
+      </latest>
+      </default>
+    </input>
+    <input type="dropdown" token="severity_filter" searchWhenChanged="false">
+      <label>Severity Filter</label>
+      <choice value="*">All Severities</choice>
+      <choice value="Critical">Critical Only</choice>
+      <choice value="High">High+</choice>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Unique ATLAS Techniques Observed</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.technique_id=AML.*
+| stats dc(framework.technique_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,10,25]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>ATLAS Tactics Observed</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.tactic_id=AML.*
+| stats dc(framework.tactic_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Avg CVSS Score Observed</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.cvss_score=*
+| stats avg(framework.cvss_score) as avg_cvss
+| eval avg_cvss=round(avg_cvss,2)</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,4,7,9]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Real-World Incidents Triggered</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.real_world_incident=* NOT framework.real_world_incident=""
+| stats dc(framework.technique_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>ATLAS Technique Frequency Heatmap by Tactic</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.tactic_name=* framework.technique_id=AML.*
+| stats count by framework.tactic_name framework.technique_id
+| eval label=framework.tactic_name + " / " + framework.technique_id
+| sort -count</query>
+        </search>
+        <option name="charting.chart">bubble</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.fieldColors">{"count": 0x00b4ff}</option>
+        <option name="charting.axisTitleX.text">Tactic</option>
+        <option name="charting.axisTitleY.text">Technique</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>Kill-Chain Stage Distribution</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.kill_chain_stage=*
+| stats count by framework.kill_chain_stage
+| sort -count</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.seriesColors">["0xdc4e41","0xf1813f","0xf8be34","0x53a051","0x00b4ff","0xcc5de8","0xff6b6b","0x38d9a9"]</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>CVSS Score Distribution</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.cvss_score=*
+| eval cvss_bucket=case(framework.cvss_score>=9.0,"9.0-10.0 Critical",framework.cvss_score>=7.0,"7.0-8.9 High",framework.cvss_score>=4.0,"4.0-6.9 Medium",1=1,"0-3.9 Low")
+| stats count by cvss_bucket
+| sort cvss_bucket</query>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.seriesColors">["0xdc4e41","0xf1813f","0xf8be34","0x53a051"]</option>
+        <option name="charting.axisTitleX.text">CVSS Range</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Attack Vector Distribution</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.attack_vector=*
+| stats count by framework.attack_vector
+| sort -count</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Full ATLAS Technique Detail Table</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.technique_id=AML.* framework.severity=$severity_filter$
+| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(agent.id) AS agents, values(defenseclaw_action) AS dc_actions, values(agent.id) AS agent_list
+  BY framework.technique_id framework.technique_name framework.tactic_name framework.kill_chain_stage framework.severity
+| eval max_cvss=round(max_cvss,1)
+| eval agents_str=mvjoin(agent_list," | ")
+| eval dc_str=mvjoin(dc_actions," | ")
+| sort -max_cvss
+| table framework.technique_id framework.technique_name framework.tactic_name framework.kill_chain_stage framework.severity max_cvss events agents dc_str
+| rename framework.technique_id AS "Technique ID", framework.technique_name AS "Technique Name",
+  framework.tactic_name AS "Tactic", framework.kill_chain_stage AS "Kill-Chain Stage",
+  framework.severity AS "Severity", max_cvss AS "Max CVSS",
+  events AS "Events", agents AS "Agents", dc_str AS "DefenseClaw Actions"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">false</option>
+        <option name="rowNumbers">true</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
+        </format>
+        <format type="color" field="Max CVSS">
+          <colorPalette type="minMidMax" maxColor="#dc4e41" minColor="#53a051" midColor="#f8be34"/>
+          <scale type="minMidMax" minValue="0" midValue="5" maxValue="10"/>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>CSA MAESTRO Layer Risk Map</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+framework.maestro_layers=*
+| mvexpand framework.maestro_layers
+| search framework.maestro_layers=L*
+| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(framework.technique_id) AS techniques
+  BY framework.maestro_layers
+| lookup acme_maestro_layers_lookup layer_id AS framework.maestro_layers OUTPUTNEW name description
+| eval max_cvss=round(max_cvss,1)
+| eval risk_level=case(max_cvss>=9.0,"🔴 CRITICAL",max_cvss>=7.0,"🟠 HIGH",max_cvss>=4.0,"🟡 MEDIUM",1=1,"🟢 LOW")
+| sort framework.maestro_layers
+| table framework.maestro_layers name risk_level events techniques max_cvss description
+| rename framework.maestro_layers AS "Layer", name AS "Layer Name", risk_level AS "Risk Level",
+  events AS "Events", techniques AS "Techniques", max_cvss AS "Max CVSS", description AS "Description"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Risk Level">
+          <colorPalette type="map">{"🔴 CRITICAL":#dc4e41,"🟠 HIGH":#f1813f,"🟡 MEDIUM":#f8be34,"🟢 LOW":#53a051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+</dashboard>

@@ -1,0 +1,26 @@
+# =============================================================================
+# ACME GenAI Compliance App — Metadata / Permissions
+# =============================================================================
+[]
+access = read : [ * ], write : [ admin, power ]
+export = system
+
+[savedsearches]
+access = read : [ * ], write : [ admin, power ]
+export = system
+
+[lookups]
+access = read : [ * ], write : [ admin ]
+export = system
+
+[transforms]
+access = read : [ * ], write : [ admin ]
+export = system
+
+[macros]
+access = read : [ * ], write : [ admin ]
+export = system
+
+[views]
+access = read : [ * ], write : [ admin, power ]
+export = system

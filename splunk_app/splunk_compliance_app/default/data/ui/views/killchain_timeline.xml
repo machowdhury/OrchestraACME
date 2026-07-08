@@ -1,0 +1,215 @@
+<dashboard version="1.1" theme="dark">
+  <label>Kill-Chain Incident Timeline</label>
+  <description>Multi-stage attack correlation view. Each incident_id groups a complete kill-chain execution. Drill into any incident for full stage-by-stage forensics.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range" searchWhenChanged="false">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="scenario_family" searchWhenChanged="false">
+      <label>Scenario Family</label>
+      <choice value="*">All Families</choice>
+      <choice value="A">A – Recon → Exfil</choice>
+      <choice value="B">B – Supply Chain Backdoor</choice>
+      <choice value="C">C – Financial Fraud Chain</choice>
+      <choice value="D">D – Rogue Agent Cascade</choice>
+      <choice value="E">E – Identity Fracture</choice>
+      <default>*</default>
+    </input>
+    <input type="text" token="incident_filter" searchWhenChanged="false">
+      <label>Incident ID Filter</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Total Kill-Chain Incidents (24h)</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats dc(incident_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Max Stages in Single Incident</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats count by incident_id
+| stats max(count) as max_stages</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Highest CVSS in Any Chain</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats max(framework.cvss_score) as max_cvss
+| eval max_cvss=round(max_cvss,1)</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,4,7,9]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Agents Compromised Across Chains</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats dc(agent.id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>Kill-Chain Incidents Over Time</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+incident_id=* testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$scenario_family$
+| timechart dc(incident_id) as incidents span=30m</query>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.seriesColors">["0x00ff9d"]</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Incidents</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Chain Stages by Kill-Chain Stage Type</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
+| stats count by framework.kill_chain_stage
+| sort -count</query>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.seriesColors">["0xf06595"]</option>
+        <option name="charting.axisTitleX.text">Stage Count</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Incident Summary — Click Incident ID to drill into stages</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+incident_id=$incident_filter$ testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$scenario_family$
+| stats
+    values(chain_name) AS chain_name,
+    values(scenario_family) AS family,
+    dc(framework.technique_id) AS stages_fired,
+    values(framework.technique_id) AS technique_chain,
+    dc(framework.kill_chain_stage) AS kill_chain_stages,
+    dc(agent.id) AS agents_involved,
+    values(agent.id) AS agent_list,
+    max(framework.cvss_score) AS max_cvss,
+    min(_time) AS chain_start,
+    max(_time) AS chain_end
+  BY incident_id
+| eval dwell_seconds=round(chain_end-chain_start,0)
+| eval dwell_str=if(dwell_seconds<60,dwell_seconds."s",round(dwell_seconds/60,1)."m")
+| eval max_cvss=round(max_cvss,1)
+| eval severity=case(max_cvss>=9.0,"🔴 CRITICAL",max_cvss>=7.0,"🟠 HIGH",max_cvss>=4.0,"🟡 MEDIUM",1=1,"🟢 LOW")
+| eval technique_chain_str=mvjoin(technique_chain," → ")
+| eval agent_str=mvjoin(agent_list," | ")
+| convert ctime(chain_start)
+| sort -chain_start
+| table incident_id chain_name family severity stages_fired kill_chain_stages max_cvss dwell_str agents_involved agent_str technique_chain_str chain_start
+| rename incident_id AS "Incident ID", chain_name AS "Scenario", family AS "Family",
+  severity AS "Severity", stages_fired AS "Stages", kill_chain_stages AS "Kill-Chain Stages",
+  max_cvss AS "Max CVSS", dwell_str AS "Dwell Time", agents_involved AS "Agents",
+  agent_str AS "Agent IDs", technique_chain_str AS "Technique Chain", chain_start AS "Start Time"</query>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="wrap">false</option>
+        <option name="rowNumbers">true</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"🔴 CRITICAL":#dc4e41,"🟠 HIGH":#f1813f,"🟡 MEDIUM":#f8be34,"🟢 LOW":#53a051}</colorPalette>
+        </format>
+        <format type="color" field="Max CVSS">
+          <colorPalette type="minMidMax" maxColor="#dc4e41" minColor="#53a051" midColor="#f8be34"/>
+          <scale type="minMidMax" minValue="0" midValue="5" maxValue="10"/>
+        </format>
+        <drilldown>
+          <set token="selected_incident">$row.Incident ID$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <row depends="$selected_incident$">
+    <panel>
+      <table>
+        <title>Stage-by-Stage Forensics — Incident: $selected_incident$</title>
+        <search>
+          <query>`acme_genai_index` incident_id="$selected_incident$"
+| sort stage_num
+| eval stage_num=if(isnull(stage_num),"?",stage_num)
+| table _time stage_num stage_name framework.technique_id framework.technique_name
+    framework.tactic_name framework.kill_chain_stage framework.severity framework.cvss_score
+    agent.id defenseclaw_action framework.detection_signal
+| rename _time AS "Time", stage_num AS "Stage", stage_name AS "Stage Name",
+  framework.technique_id AS "Technique ID", framework.technique_name AS "Technique",
+  framework.tactic_name AS "Tactic", framework.kill_chain_stage AS "Kill-Chain Stage",
+  framework.severity AS "Severity", framework.cvss_score AS "CVSS",
+  agent.id AS "Agent", defenseclaw_action AS "DefenseClaw", framework.detection_signal AS "Detection Signal"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">false</option>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
+        </format>
+        <format type="color" field="DefenseClaw">
+          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#00b4ff}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row depends="$selected_incident$">
+    <panel>
+      <html>
+        <![CDATA[
+        <div style="background:#0b1120;border:1px solid #1e2a4a;border-radius:8px;padding:16px;font-family:'Share Tech Mono',monospace">
+          <div style="color:#7986cb;font-size:.75rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">// Splunk Correlation Search for this Incident</div>
+          <div style="background:#020810;padding:14px;border-radius:5px;font-size:.8rem;color:#00ff9d;word-break:break-all">
+            sourcetype="otel:agentic:json" incident_id="$selected_incident$"<br>
+            | table _time stage_num stage_name framework.technique_id framework.severity defenseclaw_action agent.id<br>
+            | sort stage_num
+          </div>
+          <div style="color:#546e7a;font-size:.7rem;margin-top:10px">Copy this SPL into Splunk Search to replay the full incident timeline</div>
+        </div>
+        ]]>
+      </html>
+    </panel>
+  </row>
+
+</dashboard>

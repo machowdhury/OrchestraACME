@@ -1,0 +1,23 @@
+control_id,description,function
+GOVERN-1.1,"Policies, processes, and procedures are established for AI risk management",GOVERN
+GOVERN-1.2,Organizational teams committed to AI risk management,GOVERN
+GOVERN-2.1,Organizational policies exist for AI risk prioritization,GOVERN
+GOVERN-4.1,Teams are committed to AI transparency and explainability,GOVERN
+GOVERN-5.1,Policies established for organizational AI risk tolerance,GOVERN
+GOVERN-6.1,Policies for AI risks from third-party entities,GOVERN
+MAP-1.1,AI system context is established and understood,MAP
+MAP-1.5,AI risks are identified and prioritized,MAP
+MAP-2.1,AI entity characteristics and behaviors are monitored,MAP
+MAP-3.5,AI system performance metrics are established,MAP
+MAP-5.1,Likelihood of AI risk occurrence is estimated,MAP
+MEASURE-1.1,AI risk measurement methodologies are established,MEASURE
+MEASURE-2.1,AI risk metrics are developed,MEASURE
+MEASURE-2.5,AI system performance is evaluated,MEASURE
+MEASURE-2.7,AI risk is tracked on an ongoing basis,MEASURE
+MEASURE-2.10,Privacy risk in AI is monitored,MEASURE
+MEASURE-4.1,AI risk measurement methodologies are continually updated,MEASURE
+MANAGE-1.1,AI risks based on assessments are prioritized,MANAGE
+MANAGE-2.1,AI risk treatments are determined and documented,MANAGE
+MANAGE-2.4,Mechanisms are established to collect AI incidents,MANAGE
+MANAGE-3.1,AI risks are monitored on an ongoing basis,MANAGE
+MANAGE-4.1,AI incidents are documented and analyzed,MANAGE

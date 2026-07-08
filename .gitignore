@@ -5,7 +5,7 @@ __pycache__/
 .venv/
 venv/
 .env
-.env.*
+.env.local
 
 # Docker
 .docker/
@@ -24,7 +24,8 @@ Thumbs.db
 *.swp
 *.swo
 
-# Secrets — never commit real tokens or passwords
+prevbuild/
+*.tar.gz
 secrets/
 *.pem
 *.key

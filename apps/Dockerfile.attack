@@ -1,0 +1,21 @@
+# =============================================================================
+# OrchestraACME — Attack Panel Container v3
+# =============================================================================
+FROM python:3.11-slim
+
+LABEL maintainer="OrchestraACME"
+LABEL description="OrchestraACME Multi-Stage Attack Simulator"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY exploit_ui.py .
+RUN mkdir -p /var/log/defenseclaw
+
+EXPOSE 5001
+CMD ["python", "exploit_ui.py"]

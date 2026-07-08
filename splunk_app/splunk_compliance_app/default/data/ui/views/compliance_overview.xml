@@ -1,0 +1,219 @@
+<dashboard version="1.1" theme="dark">
+  <label>GenAI Compliance Overview</label>
+  <description>Universal GenAI and Agentic AI compliance posture dashboard. Works with any otel:agentic:json sourcetype data.</description>
+
+  <row>
+    <panel>
+      <single>
+        <title>Total Security Events (7d)</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d` | stats count</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,100,500]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Critical Severity Events</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d` framework.severity=Critical | stats count</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Active Kill-Chain Incidents</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` incident_id=* testbed_mode=KILL_CHAIN_ACTIVE | stats dc(incident_id) as count | fields count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>DefenseClaw HARD_DENY Blocks</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` defenseclaw_action=HARD_DENY | stats count</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Unique Agents Monitored</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d` | stats dc(agent.id) as count | fields count</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>Security Events Over Time by Severity</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d`
+| timechart count by framework.severity span=1h
+| fillnull value=0</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">["0xdc4e41","0xf1813f","0xf8be34","0x53a051"]</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Events by MITRE ATLAS Tactic</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d` framework.tactic_name=*
+| stats count by framework.tactic_name
+| sort -count
+| head 12</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.axisTitleX.text">Event Count</option>
+        <option name="charting.axisTitleY.text">Tactic</option>
+        <option name="charting.seriesColors">["0x00b4ff"]</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>OWASP LLM Top 10 — Active Risk Status</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d`
+| lookup acme_owasp_llm_lookup id AS framework.owasp_llm OUTPUTNEW name severity
+| mvexpand framework.owasp_llm
+| search framework.owasp_llm=LLM*
+| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(agent.id) AS agents_affected BY framework.owasp_llm
+| lookup acme_owasp_llm_lookup id AS framework.owasp_llm OUTPUTNEW name
+| eval risk_status=case(events>0 AND max_cvss>=9.0,"🔴 CRITICAL ACTIVE",events>0 AND max_cvss>=7.0,"🟠 HIGH ACTIVE",events>0,"🟡 ACTIVE",1=1,"🟢 NOT OBSERVED")
+| eval max_cvss=round(max_cvss,1)
+| table framework.owasp_llm name risk_status events max_cvss agents_affected
+| rename framework.owasp_llm AS "OWASP ID", name AS "Risk Name", risk_status AS "Status", events AS "Events (7d)", max_cvss AS "Max CVSS", agents_affected AS "Agents Affected"
+| sort "OWASP ID"</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Status">
+          <colorPalette type="map">{"🔴 CRITICAL ACTIVE":#dc4e41,"🟠 HIGH ACTIVE":#f1813f,"🟡 ACTIVE":#f8be34,"🟢 NOT OBSERVED":#53a051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>OWASP ASI Agentic Top 10 — Active Risk Status</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d`
+| mvexpand framework.owasp_asi
+| search framework.owasp_asi=ASI*
+| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(agent.id) AS agents_affected BY framework.owasp_asi
+| lookup acme_owasp_asi_lookup id AS framework.owasp_asi OUTPUTNEW name
+| eval risk_status=case(events>0 AND max_cvss>=9.0,"🔴 CRITICAL ACTIVE",events>0 AND max_cvss>=7.0,"🟠 HIGH ACTIVE",events>0,"🟡 ACTIVE",1=1,"🟢 NOT OBSERVED")
+| eval max_cvss=round(max_cvss,1)
+| table framework.owasp_asi name risk_status events max_cvss agents_affected
+| rename framework.owasp_asi AS "ASI ID", name AS "Risk Name", risk_status AS "Status", events AS "Events (7d)", max_cvss AS "Max CVSS", agents_affected AS "Agents Affected"
+| sort "ASI ID"</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Status">
+          <colorPalette type="map">{"🔴 CRITICAL ACTIVE":#dc4e41,"🟠 HIGH ACTIVE":#f1813f,"🟡 ACTIVE":#f8be34,"🟢 NOT OBSERVED":#53a051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <table>
+        <title>Top 10 Agents by Risk Score</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_7d` agent.id=*
+| stats count AS events, avg(framework.cvss_score) AS avg_cvss, max(framework.cvss_score) AS max_cvss, dc(framework.technique_id) AS unique_ttps BY agent.id
+| eval avg_cvss=round(avg_cvss,2), max_cvss=round(max_cvss,1)
+| eval risk_tier=case(max_cvss>=9.0,"CRITICAL",max_cvss>=7.0,"HIGH",max_cvss>=4.0,"MEDIUM",1=1,"LOW")
+| sort -max_cvss
+| head 10
+| table agent.id risk_tier events unique_ttps avg_cvss max_cvss
+| rename agent.id AS "Agent ID", risk_tier AS "Risk Tier", events AS "Events", unique_ttps AS "Unique TTPs", avg_cvss AS "Avg CVSS", max_cvss AS "Max CVSS"</query>
+          <earliest>-7d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <format type="color" field="Risk Tier">
+          <colorPalette type="map">{"CRITICAL":#dc4e41,"HIGH":#f1813f,"MEDIUM":#f8be34,"LOW":#53a051}</colorPalette>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <table>
+        <title>Recent DefenseClaw Actions</title>
+        <search>
+          <query>`acme_genai_index` `acme_last_24h` defenseclaw_action=*
+| table _time agent.id framework.technique_id framework.technique_name defenseclaw_action defenseclaw_rule_id framework.severity
+| sort -_time
+| head 20
+| rename _time AS "Time", agent.id AS "Agent", framework.technique_id AS "Technique", framework.technique_name AS "Technique Name", defenseclaw_action AS "Action", defenseclaw_rule_id AS "Rule ID", framework.severity AS "Severity"</query>
+          <earliest>-24h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">false</option>
+        <format type="color" field="Action">
+          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#00b4ff,"ALERT_RAISED":#7986cb}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+</dashboard>

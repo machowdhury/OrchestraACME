@@ -1,0 +1,11 @@
+id,name,description,severity,maestro_layers,atlas_techniques
+LLM01,Prompt Injection,"Malicious inputs manipulate LLM behaviour, bypassing safety controls or causing unauthorised actions",Critical,L3|L4,AML.T0051|AML.T0054|AML.T0055
+LLM02,Sensitive Information Disclosure,"LLM reveals confidential data from training, context window, or integrated systems",High,L1|L2,AML.T0024|AML.T0031|AML.T0038
+LLM03,Supply Chain Vulnerabilities,"Compromised models, datasets, plugins, or dependencies introduce vulnerabilities",Critical,L1|L7,AML.T0018|AML.T0025|AML.T0048
+LLM04,Data and Model Poisoning,Training data or RLHF feedback manipulated to embed biases or backdoors,Critical,L1|L2,AML.T0018|AML.T0034
+LLM05,Improper Output Handling,"LLM outputs not validated before downstream use, enabling XSS, SSRF, code injection",High,L3|L4,AML.T0031|AML.T0065
+LLM06,Excessive Agency,"LLM granted too many capabilities or permissions, enabling unintended high-impact actions",High,L4|L5,AML.T0050|AML.T0064
+LLM07,System Prompt Leakage,Confidential system prompt content revealed through model outputs,Medium,L3|L6,AML.T0003
+LLM08,Vector and Embedding Weaknesses,"Vulnerabilities in RAG pipelines, embedding models, and vector stores",High,L2,AML.T0037|AML.T0038
+LLM09,Misinformation,"LLM generates or amplifies false, misleading, or harmful information at scale",High,L1|L3,AML.T0063
+LLM10,Unbounded Consumption,"LLM processes excessive inputs consuming disproportionate resources, enabling DoS or financial drain",High,L3|L4,AML.T0040
