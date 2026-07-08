@@ -19,7 +19,8 @@ Official reference: [Vet apps for Splunk Cloud Platform](https://dev.splunk.com/
 | No KV store without collections | Unused KV transform removed |
 | No MLTK dependency | Core dashboards work without Machine Learning Toolkit |
 | No `_internal` access | All searches use customer index via macro |
-| **Design / a11y** | Splunk UI severity palette; no forced `theme="dark"`; Color+ text labels — see `DESIGN_SYSTEM.md` |
+| **Design / a11y** | Splunk UI severity palette; see `DESIGN_SYSTEM.md` |
+| **MLTK / CTSM** | Optional `mltk_anomaly_hunting` dashboard + saved searches (requires MLTK + cisco-time-series-model) |
 
 ---
 

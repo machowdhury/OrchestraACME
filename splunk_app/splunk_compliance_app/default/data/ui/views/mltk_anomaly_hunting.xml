@@ -1,0 +1,152 @@
+<dashboard version="1.1">
+  <label>MLTK Anomaly Hunting</label>
+  <description>Cisco Time Series Model (CTSM) token forecasting and behavioral anomaly hunts. Requires Splunk MLTK + cisco-time-series-model app. Pair with Foundation-Sec-8B enrichment from the banking API.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-14d@d</earliest><latest>now</latest></default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <html>
+        <h3>Prerequisites</h3>
+        <ul>
+          <li><strong>Splunk MLTK</strong> — Machine Learning Toolkit from Splunkbase</li>
+          <li><strong>Cisco Time Series Model</strong> — <a href="https://github.com/splunk/cisco-time-series-model" target="_blank" rel="noopener noreferrer">splunk/cisco-time-series-model</a> (installs <code>ctsm_forecast</code> algorithm)</li>
+          <li><strong>Lab data</strong> — Workshop path <em>Cisco + MLTK Anomaly Hunt</em> or fire Scenarios 1, 6, 7, 9</li>
+          <li><strong>Foundation-Sec-8B</strong> (optional) — <a href="https://huggingface.co/fdtn-ai/Foundation-Sec-8B" target="_blank" rel="noopener noreferrer">fdtn-ai/Foundation-Sec-8B</a> via Ollama; enrich hunts at <code>POST /api/v1/hunt/foundation-sec</code></li>
+        </ul>
+        <p>Cisco AI Defense scanners (AIBOM, MCP Scanner): <a href="https://github.com/cisco-ai-defense" target="_blank" rel="noopener noreferrer">github.com/cisco-ai-defense</a> — enable with <code>docker compose -f docker-compose.yml -f docker-compose.cisco.yml</code></p>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <single>
+        <title>CTSM Signal Events (window)</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+(mltk.ctsm_signal=true OR cisco_tsm_anomaly_score&gt;0.8)
+| stats count</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="rangeValues">[0,1]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Max TSM Anomaly Score</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ cisco_tsm_anomaly_score=*
+| stats max(cisco_tsm_anomaly_score) as max_score
+| eval max_score=round(max_score,2)</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>RAG / Galileo Alerts</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+(galileo_observe_alert=true OR galileo_anomaly_score&gt;0.7)
+| stats count</query>
+        </search>
+        <option name="drilldown">all</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Cisco Scan Findings</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+(cisco.aibom.status=FAIL OR cisco.mcp.status=FAIL OR cisco.mcp.status=WARN)
+| stats count</query>
+        </search>
+        <option name="drilldown">all</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <chart>
+        <title>Token usage — Cisco Time Series Model forecast (CTSM)</title>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+| eval input_tokens=coalesce(gen_ai_input_tokens, gen_ai_usage_input_tokens, 0)
+| eval output_tokens=coalesce(gen_ai_output_tokens, gen_ai_usage_output_tokens, 0)
+| eval total_tokens=input_tokens+output_tokens
+| timechart span=1h sum(total_tokens) AS total_tokens sum(input_tokens) AS input_tokens sum(output_tokens) AS output_tokens
+| fit MLTKContainer algo=ctsm_forecast total_tokens holdback=12 period=24 future_timespan=24 into forecast_total_tokens
+| eval anomaly_total=if(total_tokens &gt; upper_total_tokens OR total_tokens &lt; lower_total_tokens, total_tokens, null())</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">["0x006d9c","0x53a051","0xdc4e41"]</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Anomaly events — token surge &amp; depth (Scenario 7)</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+(mltk.ctsm_signal=true OR cisco_tsm_anomaly_score&gt;0.8 OR call_depth_detected&gt;5)
+| table _time incident_id campaign_week agent.id call_depth_detected gen_ai_input_tokens gen_ai_output_tokens tokens_consumed_in_loop cisco_tsm_anomaly_score api_cost_projected_usd technique_id
+| rename _time AS Time incident_id AS "Incident" campaign_week AS "Scenario" agent.id AS Agent call_depth_detected AS "Call Depth" gen_ai_input_tokens AS "Input Tokens" gen_ai_output_tokens AS "Output Tokens" tokens_consumed_in_loop AS "Loop Tokens" cisco_tsm_anomaly_score AS "TSM Score" api_cost_projected_usd AS "Est. Cost USD" technique_id AS Technique</query>
+        </search>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/acme_genai_compliance/search?q=`acme_genai_index`%20incident_id=$row.Incident$%20%7C%20sort%20-_time</link>
+        </drilldown>
+        <format type="color" field="TSM Score">
+          <colorPalette type="minMidMax" minColor="#53a051" midColor="#f8be34" maxColor="#dc4e41"/>
+          <scale type="minMidMax" minValue="0" midValue="0.5" maxValue="1"/>
+        </format>
+      </table>
+    </panel>
+    <panel>
+      <title>Behavioral anomalies — RAG / supply chain (Scenarios 1, 9)</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+(cisco_aibom_status=PROMPT_DRIFT_DETECTED OR cisco_aibom_status=HASH_MISMATCH OR galileo_observe_alert=true OR galileo_anomaly_score&gt;0.7)
+| table _time incident_id campaign_week cisco_aibom_status agent.aibom_validated galileo_observe_alert galileo_anomaly_score technique_id framework.technique_name
+| rename _time AS Time incident_id AS Incident campaign_week AS Scenario cisco_aibom_status AS "AI-BOM Status" agent.aibom_validated AS "AIBOM Valid" galileo_observe_alert AS "Galileo Alert" galileo_anomaly_score AS "Galileo Score" technique_id AS Technique framework.technique_name AS "Technique Name"</query>
+        </search>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <h3>Workshop hunts — copy into Search</h3>
+        <p><strong>Scenario 7 — Infinity Bill / CTSM token surge</strong></p>
+        <pre><code>`acme_genai_index` earliest=-1h campaign_week=7
+| table _time call_depth_detected tokens_consumed_in_loop cisco_tsm_anomaly_score mltk.ctsm_signal</code></pre>
+        <p><strong>Scenario 9 — RAG invisible leak (behavioral)</strong></p>
+        <pre><code>`acme_genai_index` earliest=-1h campaign_week=9 galileo_observe_alert=true
+| stats count by agent.id galileo_anomaly_score framework.technique_id</code></pre>
+        <p><strong>Scenario 1 — AI BOM drift</strong></p>
+        <pre><code>`acme_genai_index` earliest=-1h cisco_aibom_status!=MATCH
+| table _time agent.id cisco.aibom.scanner cisco.aibom.status model_artifact_hash_expected model_artifact_hash_found</code></pre>
+        <p><strong>Foundation-Sec-8B enrich</strong> (banking app API):</p>
+        <pre><code>curl -s -X POST http://localhost:5000/api/v1/hunt/foundation-sec \
+  -H "Content-Type: application/json" \
+  -d '{"technique_id":"AML.T0057","context":"paste hunt row fields here"}'</code></pre>
+      </html>
+    </panel>
+  </row>
+</dashboard>

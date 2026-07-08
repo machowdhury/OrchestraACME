@@ -8,7 +8,7 @@ Run the lab from the **Attack Panel**, generate telemetry, hunt in Splunk, and *
 
 > **Terminology:** The lab uses **Scenario 1–10** (one per agentic threat surface). Splunk macros still use `acme_campaign_w1` … `w10` and events carry `campaign_week=1..10` — same numbers, different label.
 
-**New here?** Complete [Prerequisites](#prerequisites), then read [The Workshop (full guide)](#the-workshop-full-guide) and run **15-Minute First Win**.
+**New here?** Complete [Prerequisites](#prerequisites), then follow the ordered curriculum in **[WORKSHOP.md](WORKSHOP.md)** and run **Level 1 — First Win**.
 
 ---
 
@@ -33,120 +33,36 @@ Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firin
 
 ---
 
-## The Workshop (full guide)
+## The Workshop
 
-The **Workshop** is the default tab on the Attack Panel. It is a set of **guided learning paths** — ordered sequences of real attacks that produce Splunk evidence you can teach from. You do not need to know which scenario to fire first or which dashboard to open; the path and the panel tell you.
+> **Ordered curriculum (start here):** **[WORKSHOP.md](WORKSHOP.md)** — Levels 0–5, role tracks, BOTS-style hunt questions (Q101–Q503), facilitator runbook.
 
-### Why run the Workshop?
+The Attack Panel **// Workshop** tab runs guided attack paths. **Splunk Search** is where learners answer hunt questions — same pattern as [Splunk BOTS](https://github.com/splunk/botsv3). See [Splunk vs Jupyter](WORKSHOP.md#splunk-vs-jupyter--recommendation).
 
-Most agentic-AI security training fails in one of two ways:
+### Quick map
 
-1. **Theory without telemetry** — slides about MCP and RAG, but no observable `workflow.block_reason` in a SIEM.
-2. **Telemetry without narrative** — random prompt injections with no story about *which surface* failed and *why that control exists*.
+| Level | Audience | Attack Panel | Splunk |
+|-------|----------|--------------|--------|
+| 0–1 | Everyone | **First Win** | Overview, Control Attestation |
+| 2 | Junior → senior analyst | First Win + Scenario 8 | Threat Hunting, Q201–Q210 |
+| 3 | Senior analyst | **Standard Workshop** | Actor Chain Story |
+| 4 | Detection engineer | **Deep Workshop** / Cisco | Technique Coverage, MLTK |
+| 5 | Architect / GRC | **MAESTRO** / Fire All 10 | NIST AI RMF |
 
-The Workshop fixes both. Every path:
+**Role quick-start:** [WORKSHOP.md § Role quick-start](WORKSHOP.md#role-quick-start-pick-one-row)
 
-- Fires **real** HTTP traffic through the banking app and **real** Ollama inference (not mocked responses).
-- Exercises **workflow-surface defenses** (tools, output gateway, retrieval) — not prompt strings alone.
-- Emits **OpenTelemetry** security fields your Splunk app already knows how to chart.
-- Ends with a **Splunk checklist** so you know what “success” looks like in the compliance app.
+### Attack Panel paths
 
-**Run the Workshop if you are:**
+| Button | Runs | Level |
+|--------|------|-------|
+| **15-Minute First Win** | Scenarios 6 → 5 → 9 | 1 |
+| **Standard Workshop** | First Win + KC-C001 | 3 |
+| **Deep Workshop** | Standard + RUN ALL 45 | 4 |
+| **Fire All 10** | Scenarios 1–10 | 5B |
+| **MAESTRO Validate** | Architecture + 6,8,9,10 | 5A |
+| **Cisco + MLTK** | Preflight + 1,6,7,9 | 4B |
 
-| Audience | Start with |
-|----------|------------|
-| First-time lab user | **15-Minute First Win** |
-| Workshop facilitator (classroom / brown-bag) | **Standard Workshop** |
-| Detection engineer proving coverage | **Deep Workshop** |
-| Someone validating all NIST / surface mappings | **Fire All 10 Scenarios** |
-
-**Skip the Workshop** only if you already know exactly which `technique_id` or `incident_id` hunt you need — then use **Top 10**, **45 Techniques**, or **Threat Chains** directly.
-
-### How to run it (step by step)
-
-1. **Complete prerequisites** above — Docker stack healthy, Splunk index + HEC working, compliance app installed.
-2. Open **http://localhost:5001** and confirm **TARGET ONLINE** and **LLM ONLINE** in the header.
-3. Stay on the **// Workshop** tab (default).
-4. Pick a path and click the green **▶ RUN …** button.
-5. **Confirm** the dialog — paths run multiple steps; keep the browser tab open.
-6. Watch the **Real-Time Attack Feed** on the right: `BLOCKED` and `INJECTED` are both valid teaching outcomes.
-7. Read the **progress box** at the bottom of the Workshop tab — it shows the current step and reflection prompts (First Win path).
-8. When the path completes, wait **60 seconds** for OTel batching → HEC → index.
-9. Open the **Splunk dashboards** listed in the completion checklist.
-10. Run the suggested SPL (in this guide or in **Threat Hunting** inside the app) to connect clicks to fields.
-
-**Facilitator tip:** Run one benign loan on http://localhost:5000 *before* the Workshop so **Overview** shows normal traffic next to attack traffic.
-
-### What you get out of it (benefits)
-
-| Benefit | Where you see it | Why it matters for education |
-|---------|------------------|------------------------------|
-| **Proof the pipeline works** | Splunk **Overview** — event count > 0 | Students trust the lab before you teach detections |
-| **Three control philosophies in one sitting** | First Win → scenarios 6, 5, 9 | Pre-LLM block vs post-LLM deny vs detect-only alert |
-| **Correlated multi-stage attacks** | Standard Workshop → **Actor Chain Story** | Real incidents span stages; `incident_id` ties them together |
-| **Measurable MITRE coverage** | Deep Workshop → **Technique Coverage Matrix** | Coverage % is defensible in audits and roadmaps |
-| **NIST control evidence** | Fire All 10 → **Control Attestation** | Pass/fail per scenario, not hand-wavy “we use AI responsibly” |
-| **Hunt-ready SPL** | Macros `` `acme_campaign_w6` `` etc. | Practitioners leave with queries, not just screenshots |
-| **Honest limit cases** | Terminal shows INJECTED on some runs | Teaches detection gaps when models behave unpredictably |
-
-### Workshop paths explained
-
-#### 15-Minute First Win (~15 min)
-
-**Runs:** Scenario 6 (MCP tools) → Scenario 5 (output gateway) → Scenario 9 (RAG detect-only).
-
-**Why this order:** Each step teaches a *different layer* of defense:
-
-```text
-Scenario 6 — workflow guard blocks BEFORE the LLM (tool scope)
-Scenario 5 — DefenseClaw may block AFTER the LLM (output)
-Scenario 9 — alert fires without always blocking (retrieval monitoring)
-```
-
-**Splunk after:** Control Attestation, Detection Efficacy (Workflow Surface Blocks), Overview.
-
-**Reflection prompts** (built into the panel):
-
-- *Why block tool abuse before the LLM runs?*
-- *When is post-LLM output inspection the right layer?*
-- *Why might detect-only be correct for retrieval exfil?*
-
-#### Standard Workshop (~25 min)
-
-**Runs:** First Win path + kill chain **KC-C001** (Fraudulent Loan Pipeline).
-
-**Why add a chain:** Single scenarios teach **surfaces**. Kill chains teach **adversary behavior over time** — the same `incident_id` appears across stages, mimicking how SOC analysts correlate alerts.
-
-**Splunk after:** + **Actor Chain Story** (filter by `incident_id`).
-
-#### Deep Workshop (~45+ min)
-
-**Runs:** Standard Workshop + **RUN ALL 45 TECHNIQUES** (10–20 min automated).
-
-**Why add 45 techniques:** Top 10 scenarios are **high-fidelity demos**. The full registry proves **breadth** — which MITRE ATLAS techniques your telemetry can observe vs gaps (NOT_OBSERVED).
-
-**Splunk after:** + **Technique Coverage Matrix**, **Detection Efficacy** (coverage %, MTTD).
-
-**Note:** Keep the Attack Panel tab open during RUN ALL 45; do not close the browser mid-run.
-
-#### Fire All 10 Scenarios (~5 min active clicking, ~10 min with Splunk)
-
-**Runs:** Scenarios 1–10 in order with pauses for ingest.
-
-**Why:** Maps every **agentic threat surface** in [THREAT_SURFACES.md](THREAT_SURFACES.md) to `campaign_week=1..10` and NIST control fields — ideal before a compliance or risk audience.
-
-**Splunk after:** Control Attestation (all rows), NIST AI RMF Scoring, MITRE ATLAS Heatmap.
-
-### Quick start — 15-minute first win
-
-| Step | Where | Action | Splunk (after 60s) | Why it matters |
-|------|-------|--------|-------------------|----------------|
-| 1 | Attack Panel → **// Workshop** | **▶ RUN FIRST WIN PATH** | — | Runs scenarios 6 → 5 → 9 automatically |
-| 2 | Splunk Search | `` `acme_campaign_w6` `` earliest=-15m | Control Attestation | Proves **pre-LLM** MCP tool block |
-| 3 | Splunk | Open **Detection Efficacy** | Workflow Surface Blocks | Shows `workflow.block_reason` before the model runs |
-| 4 | Splunk | Open **Overview** | Event count > 0 | Confirms OTel → HEC → index pipeline |
-
-**Manual equivalent:** Tab **Top 10 Scenarios** → **▶ FIRE SCENARIO 6**, then **5**, then **9** (~5s between each).
+Wait **60s** after each path before running SPL. Hunt questions with copy-paste queries: **[WORKSHOP.md](WORKSHOP.md)**.
 
 ---
 
@@ -624,6 +540,27 @@ Filters: scenario family (A–E), incident ID.
 
 ---
 
+### 12 — MLTK Anomaly Hunting
+
+**Purpose:** Cisco Time Series Model token forecasting + behavioral anomaly hunts (requires Splunk MLTK + [cisco-time-series-model](https://github.com/splunk/cisco-time-series-model)).
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Prerequisites panel | HTML | MLTK, CTSM app, Foundation-Sec-8B, Cisco overlay setup |
+| CTSM Signal Events | Single value | Events flagged for MLTK time-series anomaly |
+| Max TSM Anomaly Score | Single value | Peak `cisco_tsm_anomaly_score` in window |
+| RAG / Galileo Alerts | Single value | Behavioral retrieval anomalies |
+| Cisco Scan Findings | Single value | AIBOM/MCP preflight failures |
+| Token usage — CTSM forecast | Line chart | `\| fit MLTKContainer algo=ctsm_forecast` on hourly tokens |
+| Anomaly events table | Table | Scenario 7 Infinity Bill — depth, loop tokens, cost |
+| Behavioral anomalies table | Table | Scenarios 1 & 9 — AIBOM drift, Galileo scores |
+| Workshop SPL box | HTML | Copy-paste hunts + Foundation-Sec API example |
+
+**Light up:** Workshop → **Cisco + MLTK Anomaly Hunt** (Scenarios 1, 6, 7, 9).  
+**Optional:** `POST /api/v1/hunt/foundation-sec` with [Foundation-Sec-8B](https://huggingface.co/fdtn-ai/Foundation-Sec-8B).
+
+---
+
 ### Quick reference — Workshop path → dashboards
 
 | Workshop path | Dashboards that should light up |
@@ -632,8 +569,12 @@ Filters: scenario family (A–E), incident ID.
 | **Standard Workshop** | + Actor Chain Story, Kill-Chain Timeline |
 | **Deep Workshop** | + Technique Coverage, ATLAS Matrix Heatmap |
 | **Fire All 10 Scenarios** | + NIST AI RMF Scoring, Control Attestation (all rows) |
+| **Cisco + MLTK Anomaly Hunt** | MLTK Anomaly Hunting, Detection Efficacy, Threat Hunting (Scenarios 1,6,7,9) |
+| **MAESTRO Validate** | NIST AI RMF (MAESTRO %), Control Attestation (6,8,9,10), Detection Efficacy |
 
 Wait **60 seconds** after each path before refreshing Splunk.
+
+See also: [WORKSHOP.md](WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [BLOG_LAB_ALIGNMENT.md](BLOG_LAB_ALIGNMENT.md)
 
 ---
 
@@ -643,15 +584,15 @@ For each: **Top 10 Scenarios** tab → **▶ FIRE SCENARIO n** → wait 60s → 
 
 | Scenario | Surface | Click | Typical status | Key fields | Learning question | Dashboard |
 |----------|---------|-------|----------------|------------|-------------------|-----------|
-| 1 | Supply chain / drift | **▶ FIRE SCENARIO 1** | Drift telemetry | `cisco_aibom_status`, `agent.aibom_validated` | *How would you detect prompt drift without blocking every request?* | Control Attestation |
+| 1 | Supply chain / drift | **▶ FIRE SCENARIO 1** | Drift telemetry | `cisco_aibom_status`, `cisco.aibom.*`, `agent.aibom_validated` | *How would you detect prompt drift without blocking every request?* | Control Attestation, **MLTK Anomaly Hunting** |
 | 2 | Orchestration | **▶ FIRE SCENARIO 2** | BLOCKED | `foundry.orchestrator_override`, `workflow.block_reason` | *Why enforce policy at the orchestrator, not only in prompts?* | Detection Efficacy |
 | 3 | Input validation | **▶ FIRE SCENARIO 3** | BLOCKED | `codeguard.rule_id`, `codeguard_blocked` | *What attacks does input validation miss if you skip output inspection?* | Control Attestation |
 | 4 | Shadow runtime | **▶ FIRE SCENARIO 4** | INJECTED + discovery | `slm.unapproved`, `deployment.tier` | *How do you govern models IT never approved?* | Overview |
 | 5 | Output gateway | **▶ FIRE SCENARIO 5** | BLOCKED or INJECTED | `defenseclaw.action`, `defenseclaw_blocked` | *When is post-LLM output inspection the right layer?* | Control Attestation |
 | 6 | Tools (MCP) | **▶ FIRE SCENARIO 6** | BLOCKED | `tool.scope_violation`, `mcp.gateway.rule_id` | *Why block tool abuse before the LLM runs?* | Detection Efficacy |
-| 7 | Cost / DoS | **▶ FIRE SCENARIO 7** | Often INJECTED | `gen_ai.usage.*_tokens`, `call_depth_detected` | *What is your token budget alert threshold per agent?* | Detection Efficacy |
+| 7 | Cost / DoS | **▶ FIRE SCENARIO 7** | Often INJECTED + **CTSM anomaly** | `gen_ai.usage.*_tokens`, `cisco_tsm_anomaly_score`, `mltk.ctsm_signal` | *What is your token budget alert threshold per agent?* | **MLTK Anomaly Hunting** |
 | 8 | Agent identity (A2A) | **▶ FIRE SCENARIO 8** | BLOCKED | `cryptographic_passport_valid=false` | *Who is allowed to delegate authority between agents?* | Control Attestation |
-| 9 | Retrieval (RAG) | **▶ FIRE SCENARIO 9** | Alert, not always block | `galileo_observe_alert`, `galileo_anomaly_score` | *Why might detect-only be correct for retrieval exfil?* | Threat Hunting |
+| 9 | Retrieval (RAG) | **▶ FIRE SCENARIO 9** | Alert, not always block | `galileo_observe_alert`, `galileo_anomaly_score` | *Why might detect-only be correct for retrieval exfil?* | Threat Hunting, **MLTK Anomaly Hunting** |
 | 10 | Memory / SOC | **▶ FIRE SCENARIO 10** | BLOCKED + SOAR | `containment.action`, `soar.playbook_id` | *How fast must containment run once memory policy fires?* | Control Attestation |
 
 ### Example hunt — Scenario 6

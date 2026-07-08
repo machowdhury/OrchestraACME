@@ -18,7 +18,8 @@
 
 Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
 
-**User guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — exploits, threat hunts, Splunk dashboards.  
+**Workshop curriculum:** [docs/WORKSHOP.md](docs/WORKSHOP.md) — ordered levels 0–5, role tracks, BOTS-style hunt questions.  
+**User guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — Splunk dashboards and field reference.  
 **Threat surfaces:** [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) — eight agentic attack surfaces (2025–2026).
 
 **Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — open an issue.
@@ -47,6 +48,26 @@ OrchestraACME targets **workflow-realistic** agentic security validation, not pr
 | Orchestration guard | `apps/framework/orchestration_guard.py` |
 | NIST control evidence | `apps/framework/control_matrix.yaml` + `control_validator.py` |
 | SOAR containment sim | `apps/framework/soar_simulator.py` |
+
+### Cisco AI Defense + Splunk MLTK (optional)
+
+Enable real [Cisco AI Defense](https://github.com/cisco-ai-defense) scanners, [Foundation-Sec-8B](https://huggingface.co/fdtn-ai/Foundation-Sec-8B) hunt enrichment, and [Cisco Time Series Model](https://github.com/splunk/cisco-time-series-model) anomaly dashboards **without breaking Workshop attacks** (`LAB_MODE=teach`).
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cisco.yml --profile local up --build -d
+```
+
+Attack panel → **Cisco + MLTK Anomaly Hunt** → Splunk **MLTK Anomaly Hunting** dashboard.
+
+Full guide: [docs/CISCO_INTEGRATION.md](docs/CISCO_INTEGRATION.md) · Blog mapping: [docs/BLOG_LAB_ALIGNMENT.md](docs/BLOG_LAB_ALIGNMENT.md)
+
+### CSA MAESTRO threat modeling (optional)
+
+Add **design-time** agentic threat modeling with the official [CSA MAESTRO Threat Analyzer](https://github.com/CloudSecurityAlliance/MAESTRO), then validate predictions in Splunk. Part of **Workshop Level 5A** — see [docs/WORKSHOP.md](docs/WORKSHOP.md).
+
+Attack panel → **MAESTRO Threat Model → Attack → Splunk** · API: `GET /api/v1/maestro/architecture`
+
+Detail: [docs/MAESTRO_WORKSHOP.md](docs/MAESTRO_WORKSHOP.md)
 
 
 ## How Everything Works (Plain Language)
@@ -957,4 +978,4 @@ docker compose down
 
 OrchestraACME Lab — Principal DevSecOps Systems Engineering range for agentic AI security validation.
 
-**Third-party / reference names:** “DefenseClaw”, “CodeGuard”, and Cisco AI Defense telemetry field names are used to demonstrate compatible observability patterns. Runtime controls in this repo are **open-source lab middleware**, not Cisco shipped products. Splunk and Ollama are used as described in their respective containers/images.
+**Third-party / reference names:** “DefenseClaw”, “CodeGuard”, and Cisco AI Defense telemetry field names demonstrate compatible observability patterns. Runtime controls in this repo are **open-source lab middleware** unless you enable the optional [Cisco AI Defense overlay](docs/CISCO_INTEGRATION.md) (`docker-compose.cisco.yml`). Splunk and Ollama are used as described in their respective containers/images.

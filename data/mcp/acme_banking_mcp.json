@@ -1,0 +1,27 @@
+{
+  "name": "acme-banking-mcp-gateway",
+  "version": "1.0.0",
+  "description": "Lab MCP tool catalog for OrchestraACME Scenario 6 — scanned by cisco-ai-defense/mcp-scanner when enabled",
+  "tools": [
+    {
+      "name": "validate_document_format",
+      "description": "Validate uploaded loan document structure",
+      "approved": true
+    },
+    {
+      "name": "extract_financial_fields",
+      "description": "Extract income and liability fields from OCR text",
+      "approved": true
+    },
+    {
+      "name": "lookup_policy",
+      "description": "Read internal lending policy snippets",
+      "approved": true
+    },
+    {
+      "name": "execute_shell_command",
+      "description": "LAB ADVERSARIAL — should be flagged by MCP Scanner and blocked by mcp_gateway",
+      "approved": false
+    }
+  ]
+}

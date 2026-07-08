@@ -55,13 +55,26 @@ def _aibom_fields(agent_id: str, user_message: str) -> dict:
     drift = "PROMPT_DRIFT_DETECTED" if "SYSTEM UPDATE" in user_message.upper() else "MATCH"
     validated = drift == "MATCH"
 
-    return {
+    fields = {
         "cisco_aibom_status": drift,
         "agent.aibom_validated": str(validated).lower(),
         "model_artifact_hash_expected": expected,
         "model_artifact_hash_found": found_tag,
         "aibom.manifest_version": manifest.get("manifest_version", "1.0"),
     }
+
+    try:
+        from framework.cisco_integration import cisco_enabled, run_aibom_scan
+        if cisco_enabled():
+            scan = run_aibom_scan()
+            fields.update(scan.get("telemetry", {}))
+            if scan.get("status") == "FAIL":
+                fields["cisco_aibom_status"] = "HASH_MISMATCH"
+                fields["agent.aibom_validated"] = "false"
+    except ImportError:
+        pass
+
+    return fields
 
 
 def _foundry_fields(user_message: str) -> dict:
@@ -96,12 +109,9 @@ def _edge_slm_fields(user_message: str, model_name: str) -> dict:
     }
 
 
-def _call_depth_fields(user_message: str) -> dict:
-    depth = 0
-    if "recursive" in user_message.lower() or "iteration" in user_message.lower():
-        depth = user_message.lower().count("step") + user_message.lower().count("repeat")
-        depth = min(max(depth, 3), 50)
-    return {"call_depth_detected": str(depth)}
+def _call_depth_fields(user_message: str, campaign_week: int = 0) -> dict:
+    from framework.cisco_integration import ctsm_anomaly_fields
+    return ctsm_anomaly_fields(user_message, campaign_week)
 
 
 def enrich_campaign_context(
@@ -131,8 +141,15 @@ def enrich_campaign_context(
         fields.update(mcp_otel_fields(mcp, session_id))
         if mcp.scope_violation:
             fields["mcp.gateway.action"] = "BLOCK"
+        try:
+            from framework.cisco_integration import cisco_enabled, run_mcp_scan
+            if cisco_enabled():
+                scan = run_mcp_scan()
+                fields.update(scan.get("telemetry", {}))
+        except ImportError:
+            pass
     elif campaign_week == 7:
-        fields.update(_call_depth_fields(user_message))
+        fields.update(_call_depth_fields(user_message, campaign_week))
     elif campaign_week == 8:
         a2a = verify_a2a_message(user_message, agent_id)
         fields.update(a2a_otel_fields(a2a))

@@ -411,6 +411,8 @@ checkOllama();
 """
 
 from framework.api_routes import register_chain_routes, register_framework_routes
+from framework.cisco_routes import register_cisco_routes
+from framework.maestro_workshop import register_maestro_routes
 from framework.dataset_exporter import register_export_routes
 from framework.campaign_manifest import get_all_campaign_weeks
 from framework.attack_payloads import EMERGING_ATTACK_CLASSES
@@ -435,6 +437,8 @@ def evaluate_control_evidence():
 
 register_framework_routes(app)
 register_chain_routes(app)
+register_cisco_routes(app)
+register_maestro_routes(app)
 register_export_routes(app, base_output_dir="/var/log/defenseclaw")
 
 

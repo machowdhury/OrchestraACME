@@ -69,6 +69,7 @@ These are **educational mappings** for workshops — not compliance attestations
 
 ## Further reading
 
+- [WORKSHOP.md](WORKSHOP.md) — ordered curriculum, hunt questions Q201–Q503
 - [USER_GUIDE.md](USER_GUIDE.md) — run exploits, threat hunts, light up Splunk dashboards
 - [README.md](../README.md) — architecture and installation
 - [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) — Splunk app install

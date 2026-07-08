@@ -1,0 +1,29 @@
+# =============================================================================
+# OrchestraACME — Cisco AI Defense + MLTK overlay
+# Use with: docker compose -f docker-compose.yml -f docker-compose.cisco.yml --profile local up --build
+#
+# Integrates optional tools from https://github.com/cisco-ai-defense
+# LAB_MODE=teach (default) keeps Workshop attacks reproducible — scans log only.
+# LAB_MODE=enforce enables Cisco scan failures to block workflow (advanced demos).
+# =============================================================================
+
+services:
+  ollama:
+    environment:
+      - OLLAMA_SECURITY_MODEL=${OLLAMA_SECURITY_MODEL:-hf.co/fdtn-ai/Foundation-Sec-8B-GGUF:Q4_K_M}
+      - FOUNDATION_SEC_PULL=${FOUNDATION_SEC_PULL:-false}
+
+  banking_app:
+    environment:
+      - LAB_MODE=${LAB_MODE:-teach}
+      - CISCO_INTEGRATION_ENABLED=${CISCO_INTEGRATION_ENABLED:-true}
+      - FOUNDATION_SEC_ENABLED=${FOUNDATION_SEC_ENABLED:-true}
+      - OLLAMA_SECURITY_MODEL=${OLLAMA_SECURITY_MODEL:-hf.co/fdtn-ai/Foundation-Sec-8B-GGUF:Q4_K_M}
+    volumes:
+      - ./data/cisco_scans:/app/data/cisco_scans
+
+  attack_panel:
+    environment:
+      - LAB_MODE=${LAB_MODE:-teach}
+      - CISCO_INTEGRATION_ENABLED=${CISCO_INTEGRATION_ENABLED:-true}
+      - FOUNDATION_SEC_ENABLED=${FOUNDATION_SEC_ENABLED:-true}

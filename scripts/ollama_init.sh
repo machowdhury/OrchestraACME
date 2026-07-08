@@ -6,6 +6,8 @@
 set -e
 
 MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
+SEC_MODEL="${OLLAMA_SECURITY_MODEL:-}"
+SEC_PULL="${FOUNDATION_SEC_PULL:-false}"
 
 echo "[ollama_init] Starting Ollama server..."
 ollama serve &
@@ -31,6 +33,17 @@ else
     echo "[ollama_init] Pulling model '$MODEL'..."
     ollama pull "$MODEL"
     echo "[ollama_init] Model '$MODEL' pull complete"
+fi
+
+# Optional Foundation-Sec-8B for threat-hunt enrichment (Cisco Foundation AI)
+# https://huggingface.co/fdtn-ai/Foundation-Sec-8B
+if [ "$SEC_PULL" = "true" ] && [ -n "$SEC_MODEL" ]; then
+    if ollama list | grep -q "$SEC_MODEL"; then
+        echo "[ollama_init] Security model '$SEC_MODEL' already present"
+    else
+        echo "[ollama_init] Pulling security model '$SEC_MODEL' (large download)..."
+        ollama pull "$SEC_MODEL" || echo "[ollama_init] WARN: Security model pull failed — see docs/CISCO_INTEGRATION.md"
+    fi
 fi
 
 echo "[ollama_init] Ollama ready. Handing off to server process..."

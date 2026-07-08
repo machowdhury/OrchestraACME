@@ -1,0 +1,12 @@
+# =============================================================================
+# Optional Cisco AI Defense OSS tools (host or custom image build)
+# https://github.com/cisco-ai-defense
+# =============================================================================
+# Install: pip install -r apps/requirements-cisco.txt
+# Or run: ./scripts/install_cisco_tools.sh
+
+# MCP Scanner — https://github.com/cisco-ai-defense/mcp-scanner
+mcp-scanner @ git+https://github.com/cisco-ai-defense/mcp-scanner.git
+
+# AI BOM — https://github.com/cisco-ai-defense/aibom
+aibom @ git+https://github.com/cisco-ai-defense/aibom.git

@@ -29,4 +29,6 @@ git show HEAD~1:docs/USAGE_GUIDE.md > docs/private/BLOG_USAGE_GUIDE.md
 |------|----------|
 | [docs/USER_GUIDE.md](../USER_GUIDE.md) | All users — exploits, hunts, Splunk dashboards |
 | [docs/THREAT_SURFACES.md](../THREAT_SURFACES.md) | Threat surface reference (no campaign/blog mapping) |
+| [docs/CISCO_INTEGRATION.md](../CISCO_INTEGRATION.md) | Cisco AI Defense + MLTK overlay |
+| [docs/BLOG_LAB_ALIGNMENT.md](../BLOG_LAB_ALIGNMENT.md) | 10-week blog ↔ lab mapping (public) |
 | [README.md](../README.md) | Architecture and install |
