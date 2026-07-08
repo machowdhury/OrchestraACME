@@ -18,17 +18,151 @@
 
 Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **actual policy enforcement**, and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
 
-### Suggested GitHub Repository Description
+**Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — open an issue.
 
-```
-End-to-end agentic AI security lab: multi-agent banking app, adversarial attack range, DefenseClaw/CodeGuard runtime controls, OpenTelemetry GenAI telemetry, MITRE ATLAS/OWASP framework mapping, and Splunk compliance dashboards.
+---
+
+## How Everything Works (Plain Language)
+
+Read this section first if you want the full picture without digging through code.
+
+### The 30-second version
+
+1. You start five Docker containers (or four if you use external Splunk).
+2. The **banking app** runs four AI agents in a row; each agent asks **Ollama** a question and gets a real text answer.
+3. The **attack panel** sends malicious prompts to those same agents on purpose.
+4. Before and after every LLM call, **CodeGuard** (input) and **DefenseClaw** (output) scan text with pattern rules. If something looks like an injection or escape, the call is **blocked** and logged.
+5. Every call also emits **OpenTelemetry** data (tokens, latency, agent name, block/allow decision).
+6. The **OTel Collector** receives that data and forwards it to **Splunk** over HTTP Event Collector (HEC).
+7. The **Splunk compliance app** is a separate install — it reads that index and shows dashboards. Splunk does not run the AI.
+
+Nothing in step 4–7 happens inside Ollama. Nothing in step 6–7 requires the Python apps to include a Splunk SDK.
+
+### What happens on first boot (realistic timeline)
+
+| Phase | Time | What you will see |
+|-------|------|-------------------|
+| `docker compose up` | 0–2 min | Images build/pull; containers start |
+| Ollama model pull | 2–10 min | `docker compose logs -f ollama` — downloads `llama3.2:1b` (~1.3 GB) unless cached |
+| Splunk first init | 3–8 min | `docker compose logs -f splunk` — license acceptance, indexer startup |
+| Banking app ready | After Ollama healthy | http://localhost:5000 responds; LLM calls fail until model is pulled |
+| Splunk events | After HEC + index exist | Events appear only when HEC token, index, and collector config align |
+| Dashboards | After **you** install the app | Empty Splunk UI until `acme_genai_compliance` is installed and index has data |
+
+**Important:** `docker compose up` alone does **not** install the Splunk compliance app or create the `acme_agentic_telemetry` index. Those are documented steps you run once.
+
+### Each container — what it really does
+
+| Container | What it does | What it does **not** do | Host port |
+|-----------|--------------|-------------------------|-----------|
+| **ollama** | Serves a local LLM; pulls one model from `OLLAMA_MODEL` | Pick models automatically; call Splunk; enforce security policy | 11434 |
+| **banking_app** | 4-agent loan pipeline, REST APIs, OTel export, CodeGuard/DefenseClaw | Connect to OpenAI/Anthropic; embed a Splunk client | 5000 |
+| **attack_panel** | UI + API that POSTs adversarial payloads to banking_app | Run its own LLM; bypass banking_app middleware | 5001 |
+| **otel_collector** | Receives OTLP; batches; exports to Splunk HEC + JSONL file | Store long-term data by itself; run detections | 4317, 4318 |
+| **splunk** (local mode) | Indexes HEC events; hosts Web UI | Start automatically with dashboards pre-installed | 8000, 8088 |
+
+All containers talk on an internal Docker network (`acme_mesh`). Only the ports above are published to your laptop.
+
+### Defend path — one legitimate loan request
+
+```text
+You type a loan request on :5000
+    → banking_app receives POST /api/v1/process
+    → Agent 1 (Intake) builds a prompt + calls Ollama /api/generate
+         → CodeGuard checks your input text
+         → Ollama returns text
+         → DefenseClaw checks model output text
+         → OTel span + metrics sent to otel_collector:4318
+    → Agent 2, 3, 4 repeat (each with its own system prompt)
+    → Final APPROVED / DENIED shown in UI
+    → otel_collector forwards events to Splunk HEC
+    → (if app installed) Splunk dashboards update
 ```
 
-### Suggested GitHub Topics
+Each agent uses the **same** Ollama model (`OLLAMA_MODEL`). There is no routing like “use a bigger model for compliance.”
 
+### Attack path — one adversarial scenario
+
+```text
+You click a scenario on :5001
+    → attack_panel POSTs to banking_app /api/v1/agent/<target_agent_id>
+    → Same middleware + Ollama path as above, but input is a crafted attack string
+    → Outcome is non-deterministic:
+         BLOCKED  = CodeGuard or DefenseClaw matched a pattern → HARD_DENY telemetry
+         INJECTED = Model responded without triggering a rule (logged for gap analysis)
+    → Either way, telemetry should land in Splunk if HEC is configured
 ```
-agentic-ai, ai-security, llm-security, prompt-injection, opentelemetry, splunk, devsecops, red-team, compliance, defenseclaw, codeguard, ollama, genai, mitre-atlas, owasp-llm, owasp-asi, maestro, nist-ai-rmf
-```
+
+Attacks are **real HTTP requests** with **real model inference**. Outcomes are **not scripted** — a small model may sometimes refuse an attack without DefenseClaw firing, or occasionally comply in ways rules miss. That is intentional for detection engineering practice.
+
+### DefenseClaw and CodeGuard — full transparency
+
+These names reference **Cisco AI Defense-style runtime controls**, but in this repository they are **open-source Python middleware** in `apps/agents/llm_client.py`:
+
+| Control | When it runs | How it works in this lab | Production equivalent |
+|---------|--------------|--------------------------|---------------------|
+| **CodeGuard** | Before the prompt is sent to Ollama | Regex scan for markup/injection patterns in user input | Input sanitization / secure prompt assembly |
+| **DefenseClaw** | After Ollama returns text | Regex scan for jailbreak success, shell escape, wire-transfer strings, etc. | Output-side AI firewall / policy gateway |
+
+- They are **not** Cisco product binaries you install separately.
+- They are **not** ML classifiers — they are explicit pattern lists you can read in source code.
+- They **can** be disabled via `DEFENSECLAW_ENABLED=false` / `CODEGUARD_ENABLED=false` in environment (see `docker-compose.yml`).
+- When they block, they emit telemetry fields (`defenseclaw_blocked`, `codeguard_blocked`, rule IDs) shaped for Splunk lookups and framework crosswalks.
+
+This lab is meant to **demonstrate the telemetry and workflow** you would get with enterprise AI defense tooling, not to replace a vendor appliance.
+
+### Splunk — full transparency on the integration
+
+| Question | Honest answer |
+|----------|---------------|
+| Do the Python apps talk to Splunk directly? | **No.** They only talk to the OTel Collector. |
+| What sends data to Splunk? | The **OTel Collector** `splunk_hec` exporter in `config/otel-collector-config.yaml`. |
+| What format? | JSON events, sourcetype `otel:agentic:json`, index `acme_agentic_telemetry`. |
+| What does the Splunk app do? | **Read-only:** dashboards, lookups, scheduled searches on that index. |
+| Does Splunk run Ollama or agents? | **No.** |
+| Local vs Cloud? | **Local:** Splunk container in compose. **Cloud/Enterprise:** you point HEC env vars at your stack; no Splunk container. |
+| Two Splunk apps in repo? | **Primary:** `splunk_compliance_app` (`acme_genai_compliance`). **Legacy optional:** `App-Agentic-Compliance` for older `cisco:aidefense:json` sourcetype. Use the primary one. |
+
+**Three places must agree on HEC settings** or you will see no events: `.env`, `docker-compose.yml` environment injection into the collector, and Splunk’s HEC token configuration (index + sourcetype permissions).
+
+### Ollama model selection — full transparency
+
+| Statement | True / false |
+|-----------|--------------|
+| The app auto-detects the “best” model for each agent | **False** |
+| You configure exactly one model for the whole lab | **True** — `OLLAMA_MODEL` (default `llama3.2:1b`) |
+| The init script pulls that model on container start | **True** — `scripts/ollama_init.sh` |
+| You can change models without code changes | **True** — edit `.env`, restart stack |
+| Larger models need more RAM | **True** — adjust Docker memory limits if needed |
+
+Default `llama3.2:1b` is chosen so the lab runs on CPU with modest hardware. It is **not** representative of production banking model quality.
+
+---
+
+## What This Project Is — and Is Not
+
+| This project **is** | This project **is not** |
+|---------------------|-------------------------|
+| A **security research lab** for agentic AI | A production banking system |
+| **Live** LLM calls via Ollama | A mocked/fake LLM with canned attack results |
+| A reference **OTel GenAI** instrumentation example | A complete Cisco AI Defense product deployment |
+| A **Splunk app + HEC pipeline** for detection validation | Splunk-native AI inference or SOAR automation |
+| A **deliberately attackable** multi-agent chain | A hardened, pen-tested application |
+| Open source you can inspect and modify | A black-box commercial appliance |
+
+---
+
+## Honest Limitations
+
+We document these on purpose so expectations stay realistic:
+
+1. **Regex defenses miss and over-block.** Novel jailbreaks may succeed; benign text may match financial regexes. Tune patterns in `llm_client.py` for your demos.
+2. **Small models behave inconsistently.** Attack success rates vary run-to-run. Use results to test *detections*, not to score model safety scientifically.
+3. **Splunk setup is manual.** Index creation, HEC token, app install, and MLTK are your steps — especially on Splunk Cloud.
+4. **No auto model routing.** All four agents share one `OLLAMA_MODEL`.
+5. **Default credentials are public in this repo.** Fine for localhost labs only.
+6. **Framework mappings are educational crosswalks.** They align events to MITRE ATLAS / OWASP / NIST for reporting — they are not a certified compliance attestation.
+7. **GPU is optional.** CPU inference is slow but functional; first response may take 10–30+ seconds.
 
 ---
 
@@ -105,23 +239,29 @@ Use this lab to:
 
 - Execute a **4-agent loan processing chain** with live LLM reasoning
 - Launch **ten adversarial attack scenarios** across the agentic threat lifecycle
-- Enforce **DefenseClaw / CodeGuard** runtime policy controls
+- Enforce **DefenseClaw / CodeGuard** runtime policy controls (lab regex middleware — see [plain-language section](#defenseclaw-and-codeguard--full-transparency))
 - Validate **Splunk ES detection rules** against `otel:agentic:json` telemetry
+
+> **First boot:** LLM works after Ollama pulls the model. Splunk dashboards work only after you install the compliance app and create the index — not automatically on `docker compose up`.
 
 ---
 
 ## Table of Contents
 
-1. [Architecture](#architecture)
-2. [Requirements](#requirements)
-3. [Project Structure](#project-structure)
-4. [Implementation Overview](#implementation-overview)
-5. [Installation](#installation)
-6. [Usage Guide](#usage-guide)
-7. [Splunk App Deployment](#splunk-app-deployment)
-8. [Configuration Reference](#configuration-reference)
-9. [Verification &amp; Troubleshooting](#verification--troubleshooting)
-10. [Security Notes](#security-notes)
+1. [How Everything Works (Plain Language)](#how-everything-works-plain-language)
+2. [What This Project Is — and Is Not](#what-this-project-is--and-is-not)
+3. [Honest Limitations](#honest-limitations)
+4. [Why It Exists](#why-it-exists--the-agent-security-problem)
+5. [Architecture](#architecture)
+6. [Requirements](#requirements)
+7. [Project Structure](#project-structure)
+8. [Implementation Overview](#implementation-overview)
+9. [Installation](#installation)
+10. [Usage Guide](#usage-guide)
+11. [Splunk App Deployment](#splunk-app-deployment)
+12. [Configuration Reference](#configuration-reference)
+13. [Verification &amp; Troubleshooting](#verification--troubleshooting)
+14. [Security Notes](#security-notes)
 
 ---
 
@@ -145,7 +285,7 @@ Use this lab to:
 │                             │ HEC                                           │
 │                             ▼                                               │
 │                    ┌─────────────────┐     ┌──────────────────────────┐   │
-│                    │ Splunk          │────▶│ App-Agentic-Compliance   │   │
+│                    │ Splunk          │────▶│ acme_genai_compliance    │   │
 │                    │ :8000 / :8088   │     │ (dashboard + lookups)    │   │
 │                    └─────────────────┘     └──────────────────────────┘   │
 │                                                                             │
@@ -162,6 +302,32 @@ Use this lab to:
 4. **OTel Collector** forwards everything to Splunk HEC as `sourcetype=otel:agentic:json` in the `acme_agentic_telemetry` index.
 5. **Attack Panel** (`exploit_ui.py`) fires real adversarial payloads at targeted banking agents.
 6. **Splunk Compliance App** joins live telemetry against framework crosswalks and visualizes threats, kill-chains, and compliance posture.
+
+### Ollama Model Selection
+
+The app does **not** auto-pick a model per agent or task. One model is configured for the entire lab:
+
+| Step | What happens |
+|------|----------------|
+| `.env` | Set `OLLAMA_MODEL` (default `llama3.2:1b`) |
+| Container start | `scripts/ollama_init.sh` pulls that model into Ollama |
+| Every agent call | `llm_client.py` posts to `/api/generate` with the same model name |
+
+To switch models, change `OLLAMA_MODEL` in `.env` and restart the stack. The banking dashboard reports whether the configured model is loaded (`GET /api/v1/ollama/health`).
+
+### Splunk Integration (How It Connects)
+
+This is **not** a direct Splunk SDK integration inside the Python apps. Telemetry flows through a standard observability pipeline:
+
+| Layer | Role |
+|-------|------|
+| **Banking / attack apps** | Emit OTLP logs, traces, and metrics to the OTel Collector (`:4318`) |
+| **OTel Collector** | Batches and forwards to Splunk via the **HEC exporter** (`splunk_hec`) |
+| **Splunk index** | Stores events as `index=acme_agentic_telemetry`, `sourcetype=otel:agentic:json` |
+| **Splunk compliance app** | Dashboards, lookups, and saved searches query that index — it does not run the LLM |
+
+**Local mode:** Splunk runs in Docker; HEC points at `http://splunk:8088`.  
+**Splunk Cloud / Enterprise:** No local Splunk container — point `.env` HEC settings at your Cloud or on-prem endpoint and install the packaged app. See [splunk_app/INSTALL.md](splunk_app/INSTALL.md).
 
 ---
 
@@ -333,6 +499,8 @@ cp .env.example .env
 docker compose --profile local up --build -d
 ```
 
+> **Why `--profile local`?** The Splunk container is optional. This profile tells Compose to start it. Without it (and without `docker-compose.external.yml`), you get the app stack only — telemetry has nowhere to land unless you configure external HEC.
+
 First startup takes **5–15 minutes** because:
 
 - Ollama pulls the `llama3.2:1b` model (~1.3 GB)
@@ -368,6 +536,8 @@ Expected state: all services `running` / `healthy`.
 
 ### Step 5 — Install the Splunk compliance app
 
+> **This step is required for dashboards.** Compose does not install Splunk apps automatically. Without it, you can still run SPL queries on raw `otel:agentic:json` events if the index exists.
+
 **Option A — Local Docker (package install):**
 
 ```bash
@@ -395,6 +565,21 @@ Or via CLI inside the Splunk container:
 ```bash
 docker compose exec splunk /opt/splunk/bin/splunk install app Splunk_ML_Toolkit -update 1 -auth admin:ACMEPassword2026!
 ```
+
+### Post-install checklist (do not skip)
+
+Use this to confirm the full pipeline end-to-end:
+
+- [ ] `docker compose ps` — all services `running` / `healthy`
+- [ ] `curl http://localhost:5000/health` — banking app up
+- [ ] `docker compose exec ollama ollama list` — shows your `OLLAMA_MODEL`
+- [ ] Splunk index `acme_agentic_telemetry` exists
+- [ ] HEC token allows sourcetype `otel:agentic:json` into that index
+- [ ] `acme_genai_compliance` app installed and Splunk restarted
+- [ ] Run one attack on :5001, then in Splunk: `index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 5`
+- [ ] Open **GenAI Compliance Monitor** — events appear (may take 1–2 min for batching)
+
+If the last two steps fail, see [HEC Token Alignment](#hec-token-alignment) and [Verification & Troubleshooting](#verification--troubleshooting).
 
 ---
 
@@ -571,7 +756,7 @@ docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPLUNK_MODE` | `local` | `local` or `external` |
-| `OLLAMA_MODEL` | `llama3.2:1b` | Ollama model to pull and use |
+| `OLLAMA_MODEL` | `llama3.2:1b` | Single model pulled on startup and used for all agent calls (not auto-selected) |
 | `OTEL_COLLECTOR_HTTP` | `http://otel_collector:4318` | OTel HTTP exporter target |
 | `OTEL_SERVICE_NAME` | `acme-banking-fabric` | Service name in telemetry |
 | `BANKING_APP_URL` | `http://banking_app:5000` | Attack panel target |
@@ -690,4 +875,6 @@ docker compose down
 
 ## License & Attribution
 
-OrchestraACME Lab — Principal DevSecOps Systems Engineering range for agentic AI security validation. Built for Cisco AI Defense telemetry integration, OpenTelemetry GenAI semantic conventions, and Splunk Enterprise Security detection rule development.
+OrchestraACME Lab — Principal DevSecOps Systems Engineering range for agentic AI security validation.
+
+**Third-party / reference names:** “DefenseClaw”, “CodeGuard”, and Cisco AI Defense telemetry field names are used to demonstrate compatible observability patterns. Runtime controls in this repo are **open-source lab middleware**, not Cisco shipped products. Splunk and Ollama are used as described in their respective containers/images.
