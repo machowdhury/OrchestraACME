@@ -1,0 +1,72 @@
+<dashboard version="1.1" theme="dark">
+  <label>Threat Hunting Workbench</label>
+  <description>Practitioner threat-hunting panel with per-technique SPL templates, hunt steps, and rogue-actor narratives from the lab playbooks.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-24h</earliest><latest>now</latest></default>
+    </input>
+    <input type="text" token="technique_id">
+      <label>Technique ID</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="incident_id">
+      <label>Incident ID</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="agent_id">
+      <label>Agent ID</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Hunt Playbook Library</title>
+      <table>
+        <search>
+          <query>| inputlookup acme_technique_playbooks_lookup
+| search technique_id="$technique_id$*" OR "$technique_id$"="*"
+| table technique_id, technique_name, execution_mode, severity, threat_hunt_spl, threat_hunt_steps, rogue_actor_story, risk_statement
+| sort technique_id</query>
+        </search>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/acme_genai_compliance/search?q=`acme_genai_index` technique_id=$row.technique_id$ | sort - _time</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Scoped Hunt Results</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` $time_range$
+| search technique_id="$technique_id$*" OR "$technique_id$"="*"
+| search incident_id="$incident_id$*" OR "$incident_id$"="*"
+| search agent.id="$agent_id$*" OR "$agent_id$"="*"
+| table _time, incident_id, technique_id, framework.technique_name, agent.id, execution_mode, testbed_mode, defenseclaw_blocked, codeguard_blocked, rogue_actor_story, risk_statement
+| sort - _time</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Defense Control Efficacy</title>
+      <chart>
+        <search>
+          <query>`acme_genai_index` $time_range$
+| eval blocked=if(defenseclaw_blocked="true" OR codeguard_blocked="true", "BLOCKED", "ALLOWED")
+| stats count by technique_id, blocked
+| sort - count</query>
+        </search>
+        <option name="charting.chart">column</option>
+      </chart>
+    </panel>
+  </row>
+</dashboard>

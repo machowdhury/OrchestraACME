@@ -310,6 +310,9 @@ def call_ollama(
     temperature: float = 0.7,
     max_tokens: int = 512,
     skip_defenseclaw: bool = False,
+    incident_id: Optional[str] = None,
+    technique_id: str = "",
+    testbed_mode: str = "BANKING_LIVE",
 ) -> dict:
     """
     Make a real HTTP request to the local Ollama LLM and instrument with
@@ -328,7 +331,7 @@ def call_ollama(
             "incident_id": str,
         }
     """
-    incident_id = f"ACME-INC-{uuid.uuid4().hex[:8].upper()}"
+    incident_id = incident_id or f"ACME-INC-{uuid.uuid4().hex[:8].upper()}"
 
     # --- CodeGuard input validation ---
     codeguard_blocked = False
@@ -501,6 +504,9 @@ def call_ollama(
             "session.id":               session_id,
             "incident_id":              incident_id,
             "trace_id":                 trace_id_hex,
+            "technique_id":             technique_id,
+            "framework.technique_id":   technique_id,
+            "testbed_mode":             testbed_mode,
             # Preview of input/output (first 200 chars for forensics)
             "gen_ai.input.preview":     user_message[:200],
             "gen_ai.output.preview":    output_text[:200],

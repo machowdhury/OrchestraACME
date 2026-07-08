@@ -1,0 +1,64 @@
+<dashboard version="1.1" theme="dark">
+  <label>Threat Actor Chain Narrative</label>
+  <description>Rogue-actor storyline view: expected chain stages vs observed events, agent handoffs, and per-stage risk statements.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-24h</earliest><latest>now</latest></default>
+    </input>
+    <input type="dropdown" token="chain_id">
+      <label>Chain Scenario</label>
+      <choice value="*">All</choice>
+      <choice value="KC-A001">KC-A001 Silent Data Harvest</choice>
+      <choice value="KC-B001">KC-B001 Supply Chain Backdoor</choice>
+      <choice value="KC-C001">KC-C001 Financial Fraud Chain</choice>
+      <choice value="KC-D001">KC-D001 Rogue Agent Cascade</choice>
+      <choice value="KC-E001">KC-E001 Identity Fracture</choice>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Active Threat Actor Incidents</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` $time_range$ testbed_mode=KILL_CHAIN_ACTIVE incident_id=*
+| search chain_id="$chain_id$" OR "$chain_id$"="*"
+| stats earliest(_time) as start latest(_time) as end values(threat_actor_profile) as threat_actor values(chain_name) as chain_name values(scenario_family) as family values(technique_id) as technique_chain values(agent.id) as agents max(framework.cvss_score) as max_cvss dc(stage_num) as stages_seen by incident_id
+| eval technique_chain_str=mvjoin(technique_chain, " → ")
+| sort - start</query>
+        </search>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <set token="selected_incident">$row.incident_id$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Stage Timeline (Chronological Narrative)</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` $time_range$ incident_id="$selected_incident$" testbed_mode=KILL_CHAIN_ACTIVE
+| sort stage_num, _time
+| lookup acme_kill_chain_stages_lookup chain_id, stage_num OUTPUT stage_name as expected_stage
+| table _time, stage_num, stage_name, expected_stage, technique_id, framework.technique_name, requesting_agent_id, target_agent_id, agent.id, rogue_actor_story, risk_statement, defenseclaw_action, execution_mode</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <h3 style="color:#90caf9">How to read this view</h3>
+        <p>Each incident_id is one rogue-actor campaign. Stages should align with <code>acme_kill_chain_stages_lookup</code>. Gaps between expected and observed stages indicate detection or emulation gaps worth teaching in workshops.</p>
+        <p>SPL: <code>`acme_genai_index` incident_id="&lt;ID&gt;" | sort stage_num</code></p>
+      </html>
+    </panel>
+  </row>
+</dashboard>

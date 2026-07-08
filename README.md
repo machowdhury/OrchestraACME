@@ -453,7 +453,40 @@ On match → pipeline blocked → security event emitted to OTel Collector as `o
 
 ### 3. Attack Panel (`apps/exploit_ui.py`)
 
-Ten interactive scenarios in the **Agentic Threat Lifecycle Console**, each sending a **real adversarial payload** to a targeted banking agent via `POST /api/v1/agent/<agent_id>`:
+Four execution surfaces for practitioners and customers:
+
+| Tab | What it runs | Count |
+|-----|--------------|-------|
+| **Top 10** | Flagship live LLM scenarios (original lab demos) | 10 |
+| **All 45 Techniques** | Full MITRE ATLAS registry via unified executor | 45 |
+| **Threat Chains** | Rogue-actor multi-stage campaigns (KC-A001…E001) | 5 |
+| **Custom Payload** | Bring-your-own attack string | ∞ |
+
+**Execution modes** (transparent labeling in UI and Splunk):
+
+| Mode | Meaning |
+|------|---------|
+| **LIVE** | Real HTTP → banking agent → Ollama inference |
+| **SIMULATED** | Enriched OTel event for infra/supply-chain/recon techniques |
+| **HYBRID** | Both — typical for supply-chain and persistence scenarios |
+
+**Run everything:**
+
+```bash
+# All 45 techniques (campaign)
+curl -X POST http://localhost:5001/api/techniques/execute-all \
+  -H "Content-Type: application/json" -d '{"delay_seconds": 0.3}'
+
+# Single technique
+curl -X POST http://localhost:5000/api/v1/framework/technique/AML.T0038/execute
+
+# Threat chain with live + correlated timeline
+curl -X POST http://localhost:5001/api/chains/KC-C001/execute \
+  -H "Content-Type: application/json" \
+  -d '{"accelerated": true, "hybrid_live": true}'
+```
+
+Ten interactive scenarios in the **Agentic Threat Lifecycle Console** (Top 10 tab), each sending a **real adversarial payload** to a targeted banking agent via `POST /api/v1/agent/<agent_id>`:
 
 | Scenario | Focus | Framework Mapping |
 |----------|-------|-------------------|
@@ -472,12 +505,26 @@ Outcomes depend on live model behaviour — blocked attacks produce DefenseClaw/
 
 ### 4. Splunk Compliance Apps
 
-**Primary (v3):** `splunk_app/splunk_compliance_app/`
+**Primary (v3.1):** `splunk_app/splunk_compliance_app/`
 
 - Index: `acme_agentic_telemetry` · Sourcetype: `otel:agentic:json`
-- Five dashboards: compliance overview, MITRE ATLAS heatmap, kill-chain timeline, NIST RMF, dataset export
-- Six lookup tables and 20 scheduled correlation searches
-- 45-technique framework crosswalk with OWASP LLM, OWASP ASI, MAESTRO, and NIST AI RMF mappings
+- **Eight dashboards:** overview, **technique coverage matrix**, **threat hunting workbench**, **actor chain narrative**, MITRE ATLAS heatmap, kill-chain timeline, NIST RMF, dataset export
+- Lookups: framework crosswalk, **technique playbooks** (hunt SPL + narratives), kill-chain stages, OWASP/MAESTRO/NIST
+- 45-technique framework crosswalk with execution mode labels (LIVE / SIMULATED / HYBRID)
+
+**Teaching workflow for practitioners:**
+
+1. Run Top 10 scenarios → validate detections fire
+2. Run **All 45 Techniques** campaign → open **Technique Coverage Matrix** dashboard
+3. Execute a **Threat Chain** (KC-C001 recommended) → open **Actor Chain Narrative** for stage-by-stage story
+4. Use **Threat Hunting Workbench** — each technique includes hunt steps and copy-paste SPL
+
+Regenerate Splunk lookups after taxonomy changes:
+
+```bash
+python3 scripts/sync_splunk_lookups.py
+./scripts/package_splunk_app.sh   # outputs dist/acme_genai_compliance-2.1.0.tar.gz
+```
 
 **Legacy (optional):** `splunk_app/App-Agentic-Compliance/` — Cisco AI Defense crosswalk for `cisco:aidefense:json` events
 
@@ -542,9 +589,9 @@ Expected state: all services `running` / `healthy`.
 
 ```bash
 ./scripts/package_splunk_app.sh
-docker cp dist/acme_genai_compliance-2.0.0.tar.gz acme_splunk:/tmp/
+docker cp dist/acme_genai_compliance-2.1.0.tar.gz acme_splunk:/tmp/
 docker compose exec splunk /opt/splunk/bin/splunk install app \
-  /tmp/acme_genai_compliance-2.0.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+  /tmp/acme_genai_compliance-2.1.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
 docker compose exec splunk /opt/splunk/bin/splunk restart
 ```
 
@@ -651,6 +698,9 @@ Navigate in Splunk Web: **GenAI Compliance Monitor**
 | Dashboard | Purpose |
 |-----------|---------|
 | **Compliance Overview** | Denial counts, severity distribution, agent activity |
+| **Technique Coverage Matrix** | All 45 techniques — observed vs not observed, execution mode |
+| **Threat Hunting Workbench** | Per-technique hunt SPL, steps, rogue-actor stories |
+| **Actor Chain Narrative** | Rogue-actor timeline with agent handoffs and stage risks |
 | **MITRE ATLAS Heatmap** | Technique coverage across tactics |
 | **Kill-Chain Timeline** | Correlated multi-stage incident playback |
 | **NIST RMF Compliance** | Control function mapping and gaps |
@@ -688,17 +738,17 @@ Full installation guide: **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)**
 ```bash
 chmod +x scripts/package_splunk_app.sh
 ./scripts/package_splunk_app.sh
-# Output: dist/acme_genai_compliance-2.0.0.tar.gz
+# Output: dist/acme_genai_compliance-2.1.0.tar.gz
 ```
 
 **Splunk Cloud:** Apps → Upload app → select the `.tar.gz`  
-**Splunk Enterprise:** `$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.0.0.tar.gz`
+**Splunk Enterprise:** `$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.1.0.tar.gz`
 
 After install, open **GenAI Compliance Monitor → Setup Guide** for HEC configuration and health checks.
 
 ### Splunk Cloud Quick Setup
 
-1. **Install app** — upload `dist/acme_genai_compliance-2.0.0.tar.gz`
+1. **Install app** — upload `dist/acme_genai_compliance-2.1.0.tar.gz`
 2. **Create index** — `acme_agentic_telemetry`
 3. **Create HEC token** — sourcetype `otel:agentic:json`, index `acme_agentic_telemetry`
 4. **Configure OrchestraACME `.env`** — set `SPLUNK_MODE=external` and your Cloud HEC URL/token

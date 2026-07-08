@@ -49,27 +49,6 @@ def _filter_techniques() -> list:
     return list(TECHNIQUE_REGISTRY)
 
 
-def _emit_technique_event(technique_id: str, otel_endpoint: str) -> bool:
-    technique = get_technique(technique_id)
-    if not technique:
-        return False
-
-    engine = create_engine(otel_endpoint)
-    event_body = {
-        "event_type": "framework_technique_emit",
-        "technique_id": technique.technique_id,
-        "technique_name": technique.technique_name,
-        "tactic_id": technique.tactic_id,
-        "severity": technique.severity,
-        "owasp_llm": technique.owasp_llm,
-        "owasp_asi": technique.owasp_asi,
-        "defenseclaw_action": technique.defenseclaw_action,
-        "detection_signal": technique.detection_signal,
-        "sourcetype": "otel:agentic:json",
-    }
-    return engine._emit_event("acme-framework-emitter", event_body)
-
-
 def register_framework_routes(app: Flask) -> None:
     @app.route("/api/v1/framework/techniques", methods=["GET"])
     def framework_techniques():
@@ -88,16 +67,45 @@ def register_framework_routes(app: Flask) -> None:
 
     @app.route("/api/v1/framework/emit/<technique_id>", methods=["POST"])
     def framework_emit_technique(technique_id: str):
-        otel_endpoint = os.environ.get("OTEL_COLLECTOR_HTTP", "http://otel_collector:4318")
+        from framework.technique_executor import create_executor
         if not get_technique(technique_id):
             return jsonify({"error": f"Unknown technique: {technique_id}"}), 404
-        success = _emit_technique_event(technique_id, otel_endpoint)
-        status = 200 if success else 502
-        return jsonify({
-            "technique_id": technique_id,
-            "emitted": success,
-            "otel_endpoint": otel_endpoint,
-        }), status
+        result = create_executor().execute_technique(technique_id, force_mode="SIMULATED")
+        return jsonify(result), 200
+
+    @app.route("/api/v1/framework/playbooks", methods=["GET"])
+    def framework_playbooks():
+        from framework.technique_playbooks import get_coverage_matrix
+        return jsonify(get_coverage_matrix())
+
+    @app.route("/api/v1/framework/playbook/<technique_id>", methods=["GET"])
+    def framework_playbook_detail(technique_id: str):
+        from framework.technique_playbooks import get_playbook
+        playbook = get_playbook(technique_id)
+        if not playbook:
+            return jsonify({"error": f"Unknown technique: {technique_id}"}), 404
+        return jsonify(playbook.to_dict())
+
+    @app.route("/api/v1/framework/technique/<technique_id>/execute", methods=["POST"])
+    def framework_execute_technique(technique_id: str):
+        from framework.technique_executor import create_executor
+        if not get_technique(technique_id):
+            return jsonify({"error": f"Unknown technique: {technique_id}"}), 404
+        body = request.get_json(silent=True) or {}
+        result = create_executor().execute_technique(
+            technique_id,
+            incident_id=body.get("incident_id"),
+            force_mode=body.get("force_mode"),
+        )
+        return jsonify(result)
+
+    @app.route("/api/v1/framework/execute-all", methods=["POST"])
+    def framework_execute_all():
+        from framework.technique_executor import create_executor
+        body = request.get_json(silent=True) or {}
+        delay = float(body.get("delay_seconds", 0.3))
+        result = create_executor().execute_all(delay_seconds=delay)
+        return jsonify(result)
 
     @app.route("/api/v1/framework/stats", methods=["GET"])
     def framework_stats():
@@ -133,8 +141,17 @@ def register_chain_routes(app: Flask) -> None:
             }), 404
 
         accelerated = bool((request.get_json(silent=True) or {}).get("accelerated", True))
+        hybrid_live = bool((request.get_json(silent=True) or {}).get("hybrid_live", False))
         try:
-            report = engine.execute_chain(chain_id, accelerated=accelerated)
+            if hybrid_live:
+                from framework.technique_executor import create_executor
+                report = create_executor().execute_chain(chain_id, accelerated=accelerated, hybrid_live=True)
+            else:
+                report = engine.execute_chain(
+                    chain_id,
+                    accelerated=accelerated,
+                    enrich_playbooks=True,
+                )
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 404
         except requests.RequestException as exc:

@@ -15,6 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY exploit_ui.py .
+COPY framework/ ./framework/
 RUN mkdir -p /var/log/defenseclaw
 
 EXPOSE 5001

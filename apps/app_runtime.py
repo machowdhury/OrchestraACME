@@ -70,7 +70,7 @@ def call_single_agent(agent_id):
     if agent_id not in AGENTS:
         return jsonify({"error": f"Unknown agent: {agent_id}"}), 404
     data    = request.get_json() or {}
-    message = data.get("message", "").strip()
+    message = data.get("message", data.get("payload", "")).strip()
     if not message:
         return jsonify({"error": "message field required"}), 400
 
@@ -86,6 +86,9 @@ def call_single_agent(agent_id):
         temperature=agent.get("temperature", 0.7),
         max_tokens=agent.get("max_tokens", 512),
         skip_defenseclaw=data.get("skip_defenseclaw", False),
+        incident_id=data.get("incident_id"),
+        technique_id=data.get("technique_id", ""),
+        testbed_mode=data.get("testbed_mode", "BANKING_LIVE"),
     )
     return jsonify({**result, "agent_id": agent_id, "agent_name": agent["name"]})
 

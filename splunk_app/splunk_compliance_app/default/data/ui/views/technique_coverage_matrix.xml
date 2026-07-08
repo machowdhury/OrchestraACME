@@ -1,0 +1,75 @@
+<dashboard version="1.1" theme="dark">
+  <label>Technique Coverage Matrix</label>
+  <description>Observed vs expected MITRE ATLAS techniques. Teaching view for practitioners validating lab coverage across all 45 registry entries.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-7d</earliest><latest>now</latest></default>
+    </input>
+    <input type="dropdown" token="mode_filter">
+      <label>Execution Mode</label>
+      <choice value="*">All</choice>
+      <choice value="LIVE">LIVE</choice>
+      <choice value="SIMULATED">SIMULATED</choice>
+      <choice value="HYBRID">HYBRID</choice>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Techniques Observed</title>
+        <search>
+          <query>`acme_genai_index` $time_range$
+| stats dc(technique_id) as observed
+| appendcols [| inputlookup acme_framework_lookup | stats count as expected]
+| eval coverage_pct=round(100*observed/expected,1)</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Coverage %</title>
+        <search>
+          <query>`acme_genai_index` $time_range$
+| stats dc(technique_id) as observed
+| appendcols [| inputlookup acme_framework_lookup | stats count as expected]
+| eval coverage_pct=round(100*observed/expected,1) | fields coverage_pct</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Top-10 Live Scenarios Fired</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ is_top_10=true
+| stats dc(technique_id) as count</query>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Full Technique Matrix (Expected vs Observed)</title>
+      <table>
+        <search>
+          <query>| inputlookup acme_framework_lookup
+| eval technique_id=technique_id
+| join type=left technique_id [
+    search `acme_genai_index` $time_range$
+    | stats count as event_count dc(incident_id) as incidents latest(_time) as last_seen by technique_id
+  ]
+| lookup acme_technique_playbooks_lookup technique_id OUTPUT execution_mode, is_top_10, threat_hunt_spl
+| eval status=if(isnull(event_count),"NOT_OBSERVED",if(event_count&gt;0,"OBSERVED","NOT_OBSERVED"))
+| eval event_count=coalesce(event_count,0)
+| where if("$mode_filter$"="*",1,execution_mode="$mode_filter$")
+| table technique_id, technique_name, tactic_name, kill_chain_stage, execution_mode, is_top_10, status, event_count, incidents, last_seen, severity, cvss_score
+| sort tactic_name, technique_id</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

@@ -490,6 +490,8 @@ class ChainEngine:
         chain_id: str,
         on_stage_complete: Optional[Callable[[int, str, bool], None]] = None,
         accelerated: bool = False,
+        incident_id: Optional[str] = None,
+        enrich_playbooks: bool = False,
     ) -> dict:
         """
         Execute a named kill-chain scenario.
@@ -506,9 +508,10 @@ class ChainEngine:
         if not chain:
             raise ValueError(f"Unknown chain_id: {chain_id}. Available: {list(KILL_CHAIN_MAP.keys())}")
 
-        incident_id = f"ACME-INC-{uuid.uuid4().hex[:8].upper()}"
+        incident_id = incident_id or f"ACME-INC-{uuid.uuid4().hex[:8].upper()}"
         parent_trace_id = uuid.uuid4().hex + uuid.uuid4().hex
         execution_start = time.time()
+        previous_agent_id = ""
 
         logger.info(f"[ChainEngine] Starting chain {chain_id}: '{chain.name}' | incident_id={incident_id}")
 
@@ -519,6 +522,11 @@ class ChainEngine:
                 logger.warning(f"[ChainEngine] No technique found for {stage.technique_id}, skipping")
                 continue
 
+            stage_fields = dict(stage.custom_fields)
+            if previous_agent_id:
+                stage_fields.setdefault("requesting_agent_id", previous_agent_id)
+            stage_fields.setdefault("target_agent_id", stage.agent_id)
+
             event = self._build_chain_event(
                 chain=chain,
                 stage=stage,
@@ -527,6 +535,8 @@ class ChainEngine:
                 total_stages=len(chain.stages),
                 incident_id=incident_id,
                 parent_trace_id=parent_trace_id,
+                enrich_playbooks=enrich_playbooks,
+                extra_stage_fields=stage_fields,
             )
 
             success = self._emit_event(stage.agent_id, event)
@@ -547,6 +557,8 @@ class ChainEngine:
 
             if on_stage_complete:
                 on_stage_complete(stage_num, stage.technique_id, success)
+
+            previous_agent_id = stage.agent_id
 
             # Inter-stage delay (simulates dwell time)
             delay = 0.2 if accelerated else stage.inter_stage_delay_seconds
@@ -620,6 +632,7 @@ class ChainEngine:
             "event_type": f"TECHNIQUE_{technique_id.replace('.', '_')}",
             "incident_id": incident_id,
             "chain_id": "SINGLE_TECHNIQUE",
+            "technique_id": technique.technique_id,
             "stage_name": technique.technique_name,
             "stage_num": 1,
             "total_stages": 1,
@@ -644,9 +657,11 @@ class ChainEngine:
         total_stages: int,
         incident_id: str,
         parent_trace_id: str,
+        enrich_playbooks: bool = False,
+        extra_stage_fields: Optional[dict] = None,
     ) -> dict:
         """Construct the full enriched event body for one chain stage."""
-        return {
+        event = {
             # Chain correlation fields
             "incident_id": incident_id,
             "chain_id": chain.chain_id,
@@ -681,7 +696,7 @@ class ChainEngine:
             "splunk_spl_template": technique.splunk_spl_template,
 
             # Stage-specific custom fields
-            **stage.custom_fields,
+            **(extra_stage_fields or stage.custom_fields),
 
             # HuggingFace dataset schema compatibility
             "hf_id": f"{chain.chain_id}-STAGE-{stage_num:02d}",
@@ -702,6 +717,26 @@ class ChainEngine:
             "timestamp_iso": datetime.datetime.utcnow().isoformat() + "Z",
             "event_id": f"ACME-EVT-{uuid.uuid4().hex[:12].upper()}",
         }
+
+        if enrich_playbooks:
+            try:
+                from framework.technique_playbooks import get_playbook
+                playbook = get_playbook(stage.technique_id)
+                if playbook:
+                    event.update({
+                        "technique_id": playbook.technique_id,
+                        "execution_mode": playbook.execution_mode,
+                        "practitioner_narrative": playbook.practitioner_narrative,
+                        "rogue_actor_story": playbook.rogue_actor_story,
+                        "risk_statement": playbook.risk_statement,
+                        "threat_hunt_spl": playbook.threat_hunt_spl,
+                        "threat_hunt_steps": " | ".join(playbook.threat_hunt_steps),
+                        "is_top_10": str(playbook.is_top_10).lower(),
+                    })
+            except ImportError:
+                pass
+
+        return event
 
     def _build_otlp_payload(self, agent_id: str, event_body: dict) -> dict:
         """Wrap an event body in a valid OTLP log record payload."""
@@ -793,9 +828,9 @@ class ChainEngine:
 # CONVENIENCE: Pre-built engine factory
 # =============================================================================
 
-def create_engine(otel_http_endpoint: str) -> ChainEngine:
+def create_engine(otel_http_endpoint: str, service_name: str = "acme-banking-fabric") -> ChainEngine:
     """Create a ChainEngine instance configured for the given OTel endpoint."""
-    return ChainEngine(otel_http_endpoint=otel_http_endpoint)
+    return ChainEngine(otel_http_endpoint=otel_http_endpoint, service_name=service_name)
 
 
 if __name__ == "__main__":
