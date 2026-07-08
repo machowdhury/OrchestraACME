@@ -8,7 +8,7 @@
 [![Splunk](https://img.shields.io/badge/Splunk-Compliance_App-65A637?logo=splunk&logoColor=white)](splunk_app/App-Agentic-Compliance/)
 
 > **Repository:** [github.com/machowdhury/OrchestraACME](https://github.com/machowdhury/OrchestraACME)  
-> **Author:** [machowdhury](https://github.com/machowdhury)
+> **Author:** Mahamudul Alam Chowdhury ([@machowdhury](https://github.com/machowdhury))
 
 ---
 
