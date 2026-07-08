@@ -139,6 +139,7 @@ class TechniqueExecutor:
             "technique_id": playbook.technique_id,
             "testbed_mode": "TECHNIQUE_LAB_LIVE",
             "session_id": f"TECH-{playbook.technique_id}-{uuid.uuid4().hex[:6].upper()}",
+            "campaign_week": playbook.scenario_week or 0,
         }
         try:
             response = requests.post(
@@ -151,6 +152,7 @@ class TechniqueExecutor:
             blocked = bool(
                 body.get("defenseclaw_blocked")
                 or body.get("codeguard_blocked")
+                or body.get("workflow_blocked")
                 or body.get("blocked")
             )
             return {

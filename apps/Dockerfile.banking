@@ -1,5 +1,6 @@
 # =============================================================================
 # OrchestraACME — Banking App Container v3
+# Build context: repository root
 # =============================================================================
 FROM python:3.11-slim
 
@@ -11,13 +12,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY apps/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app + all sub-packages
-COPY app_runtime.py .
-COPY agents/ ./agents/
-COPY framework/ ./framework/
+COPY apps/app_runtime.py .
+COPY apps/agents/ ./agents/
+COPY apps/framework/ ./framework/
+COPY data/ ./data/
 
 RUN mkdir -p /var/log/defenseclaw
 

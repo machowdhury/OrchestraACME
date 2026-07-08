@@ -129,6 +129,7 @@ Security rules you MUST follow:
 def run_agent_pipeline(
     user_input: str,
     session_id: Optional[str] = None,
+    campaign_week: int = 0,
 ) -> dict:
     """
     Routes user_input through all four agents in sequence.
@@ -170,6 +171,7 @@ def run_agent_pipeline(
             session_id=session_id,
             temperature=agent["temperature"],
             max_tokens=agent["max_tokens"],
+            campaign_week=campaign_week,
         )
 
         agent_record = {
@@ -184,17 +186,22 @@ def run_agent_pipeline(
             "model":               result["model"],
             "defenseclaw_blocked": result["defenseclaw_blocked"],
             "codeguard_blocked":   result["codeguard_blocked"],
+            "workflow_blocked":    result.get("workflow_blocked", False),
+            "block_reason":        result.get("block_reason"),
+            "workflow_surface":    result.get("workflow_surface"),
             "trace_id":            result["trace_id"],
             "incident_id":         result["incident_id"],
+            "control_evidence":    result.get("control_evidence"),
         }
         pipeline_result["agents"].append(agent_record)
 
         # If any agent blocked, halt pipeline and report
-        if result["defenseclaw_blocked"] or result["codeguard_blocked"]:
+        if result.get("workflow_blocked") or result["defenseclaw_blocked"] or result["codeguard_blocked"]:
             pipeline_result["pipeline_blocked"] = True
             pipeline_result["block_reason"] = (
-                "DEFENSECLAW_HARD_DENY" if result["defenseclaw_blocked"]
-                else "CODEGUARD_SBD_VIOLATION"
+                result.get("block_reason")
+                or ("DEFENSECLAW_HARD_DENY" if result["defenseclaw_blocked"]
+                    else "CODEGUARD_SBD_VIOLATION")
             )
             pipeline_result["final_output"] = result["response"]
             logger.warning(f"[Pipeline] BLOCKED at {agent_id}: {pipeline_result['block_reason']}")

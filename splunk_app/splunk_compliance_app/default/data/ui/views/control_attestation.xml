@@ -1,0 +1,77 @@
+<dashboard version="1.1" theme="dark">
+  <label>Control Attestation</label>
+  <description>Measurable NIST AI RMF control evidence — pass/fail per campaign week and workflow surface.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-7d</earliest><latest>now</latest></default>
+    </input>
+    <input type="dropdown" token="campaign_week">
+      <label>Campaign Week</label>
+      <choice value="*">All</choice>
+      <choice value="1">W1 - Code Compliance Illusion</choice>
+      <choice value="2">W2 - Evaluation Harness</choice>
+      <choice value="3">W3 - Vibe Coding</choice>
+      <choice value="4">W4 - Shadow SLM</choice>
+      <choice value="5">W5 - Front Desk</choice>
+      <choice value="6">W6 - MCP Tools</choice>
+      <choice value="7">W7 - Infinity Bill</choice>
+      <choice value="8">W8 - Identity</choice>
+      <choice value="9">W9 - Invisible Leak</choice>
+      <choice value="10">W10 - Self-Healing SOC</choice>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Controls Passed</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ control.pass_count=*
+| stats sum(control.pass_count) as passed</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Controls Failed</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ control.fail_count=*
+| stats sum(control.fail_count) as failed</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Latest Pass Rate</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ control.pass_rate_pct=*
+| stats latest(control.pass_rate_pct) as rate</query>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>NIST Control Matrix (Expected vs Observed)</title>
+      <table>
+        <search>
+          <query>| inputlookup acme_control_matrix_lookup
+| eval campaign_week=campaign_week
+| join type=left campaign_week [
+    search `acme_genai_index` $time_range$
+    | where if("$campaign_week$"="*",1,campaign_week="$campaign_week$")
+    | stats count as events latest(control.status) as observed_status latest(control.pass_rate_pct) as pass_rate by campaign_week
+  ]
+| lookup acme_campaign_weeks_lookup campaign_week OUTPUT theme attack_class workflow_surface
+| eval attestation=if(isnull(events),"NOT_TESTED",if(observed_status="PASS","PASS","FAIL"))
+| table campaign_week theme attack_class workflow_surface control_id nist_function nist_subcategory pass_signal fail_signal attestation events pass_rate
+| sort campaign_week</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

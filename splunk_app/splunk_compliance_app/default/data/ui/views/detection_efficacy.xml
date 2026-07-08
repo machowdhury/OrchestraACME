@@ -1,0 +1,91 @@
+<dashboard version="1.1" theme="dark">
+  <label>Detection Efficacy</label>
+  <description>Proves detection value: technique coverage %, mean time to detect (MTTD), and kill-chain completeness for OrchestraACME campaigns.</description>
+
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time_range">
+      <label>Time Range</label>
+      <default><earliest>-7d</earliest><latest>now</latest></default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <single>
+        <title>Technique Coverage %</title>
+        <search>
+          <query>`acme_genai_index` $time_range$
+| stats dc(technique_id) as observed
+| appendcols [| inputlookup acme_framework_lookup | stats count as expected]
+| eval coverage_pct=round(100*observed/expected,1) | fields coverage_pct</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>MTTD (seconds, blocked events)</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ (workflow.blocked=true OR defenseclaw_blocked=true OR codeguard_blocked=true)
+| stats avg(gen_ai.client.operation.duration_ms) as avg_ms
+| eval mttd_sec=round(avg_ms/1000,2) | fields mttd_sec</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Chain Incidents</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ incident_id=ACME-INC*
+| stats dc(incident_id) as chains</query>
+        </search>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Control Pass Rate %</title>
+        <search>
+          <query>`acme_genai_index` $time_range$ control.pass_rate_pct=*
+| stats latest(control.pass_rate_pct) as pass_rate</query>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Kill-Chain Stage Completeness by Incident</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` $time_range$ incident_id=*
+| stats dc(framework.kill_chain_stage) as stages_seen values(framework.kill_chain_stage) as stages by incident_id
+| eval completeness=if(stages_seen>=3,"HIGH",if(stages_seen>=2,"MEDIUM","LOW"))
+| sort - stages_seen</query>
+        </search>
+      </table>
+    </panel>
+    <panel>
+      <title>Workflow Surface Blocks</title>
+      <chart>
+        <search>
+          <query>`acme_genai_index` $time_range$ workflow.blocked=true OR workflow.block_reason=*
+| stats count by workflow.block_reason</query>
+        </search>
+        <option name="charting.chart">pie</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Campaign Week Activity</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` $time_range$ campaign_week=*
+| lookup acme_campaign_weeks_lookup campaign_week OUTPUT theme attack_class workflow_surface expected_block_layer
+| stats count latest(_time) as last_seen values(workflow.block_reason) as block_reasons by campaign_week theme attack_class workflow_surface expected_block_layer
+| sort campaign_week</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

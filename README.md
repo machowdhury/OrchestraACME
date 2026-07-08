@@ -16,11 +16,40 @@
 
 **OrchestraACME** is an end-to-end **agentic AI security lab** that simulates a real multi-agent banking application, attacks it with adversarial prompts, defends it with runtime AI security controls, and streams everything into Splunk for detection engineering and compliance reporting.
 
-Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **actual policy enforcement**, and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
+Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
+
+**Hands-on guide:** [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) — how to fire campaign weeks and generate Splunk evidence for blog posts.  
+**Threat library:** [docs/EMERGING_THREATS.md](docs/EMERGING_THREATS.md) — eight emerging attack classes (2025–2026).
 
 **Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — open an issue.
 
 ---
+
+## A+ Lab — What Changed (v3.1)
+
+OrchestraACME targets **workflow-realistic** agentic security validation, not prompt-only red teaming.
+
+| Today (good) | A+ (this build) |
+|--------------|-----------------|
+| Attacks are mostly strings sent to one agent | Attacks exploit **tools, RAG, memory, A2A, orchestration** surfaces |
+| Defense is regex middleware | Defense is **enforced in code paths** (MCP gateway, memory policy, A2A verifier, orchestration guard) + regex output inspection |
+| Framework mapping is lookup enrichment | Framework mapping is **measurable control evidence** (NIST pass/fail per campaign week) |
+| Splunk shows events | Splunk proves **detection efficacy** (coverage %, MTTD, chain completeness, control attestation) |
+| 45 techniques = catalog completeness | 45 techniques = **curated emerging threat library** with reproducible kill chains |
+
+**Eight emerging attack classes** (2025–2026) each have a campaign week, workflow surface, and Splunk macro — see [docs/EMERGING_THREATS.md](docs/EMERGING_THREATS.md).
+
+| Layer | Module |
+|-------|--------|
+| Unified workflow guard | `apps/framework/workflow_guard.py` |
+| MCP tool gateway | `apps/framework/mcp_gateway.py` |
+| A2A DID verifier | `apps/framework/a2a_verifier.py` |
+| Memory policy | `apps/framework/memory_policy.py` |
+| RAG / Galileo probe | `apps/framework/rag_store.py` |
+| Orchestration guard | `apps/framework/orchestration_guard.py` |
+| NIST control evidence | `apps/framework/control_matrix.yaml` + `control_validator.py` |
+| SOAR containment sim | `apps/framework/soar_simulator.py` |
+
 
 ## How Everything Works (Plain Language)
 
@@ -161,7 +190,7 @@ We document these on purpose so expectations stay realistic:
 3. **Splunk setup is manual.** Index creation, HEC token, app install, and MLTK are your steps — especially on Splunk Cloud.
 4. **No auto model routing.** All four agents share one `OLLAMA_MODEL`.
 5. **Default credentials are public in this repo.** Fine for localhost labs only.
-6. **Framework mappings are educational crosswalks.** They align events to MITRE ATLAS / OWASP / NIST for reporting — they are not a certified compliance attestation.
+6. **Framework mappings include control attestation** — NIST pass/fail is emitted per event; not a certified compliance attestation.
 7. **GPU is optional.** CPU inference is slow but functional; first response may take 10–30+ seconds.
 
 ---
@@ -188,7 +217,7 @@ Enterprises are deploying **multi-agent AI systems** that chain LLMs across inta
 | Capability | How OrchestraACME Delivers It |
 |------------|-------------------------------|
 | **Red-team testing** | Ten-scenario adversarial lifecycle console fires real prompt injection, tool escape, identity spoofing, and autonomous agent attacks |
-| **Runtime defense** | DefenseClaw and CodeGuard middleware inspect every prompt and model response; blocked events emit `HARD_DENY` telemetry to Splunk |
+| **Runtime defense** | Workflow guards (MCP, A2A, memory, orchestration) + DefenseClaw/CodeGuard on every LLM call |
 | **Multi-agent chain testing** | 4-agent loan pipeline (Intake → Extraction → Risk → Compliance) mirrors real enterprise agent orchestration |
 | **Non-deterministic reasoning** | Live Ollama `llama3.2:1b` calls — attacks test actual model behavior, not canned responses |
 
@@ -206,7 +235,7 @@ Enterprises are deploying **multi-agent AI systems** that chain LLMs across inta
 | Capability | How OrchestraACME Delivers It |
 |------------|-------------------------------|
 | **Framework crosswalk** | 45+ technique registry spanning MITRE ATLAS, OWASP LLM Top 10, OWASP ASI, CSA MAESTRO, and NIST AI RMF |
-| **Compliance dashboards** | Five Splunk views: overview, ATLAS heatmap, kill-chain timeline, NIST RMF, and dataset export |
+| **Compliance dashboards** | Detection Efficacy, Control Attestation, Technique Coverage, kill-chain timeline, NIST RMF |
 | **Audit trail** | Every blocked transaction logged with event ID, transaction ID, matched indicator, agent name, and severity |
 | **Configuration variance detection** | Dashboard identifies events that fail crosswalk enrichment — surfacing governance gaps |
 
@@ -238,8 +267,8 @@ docker compose --profile local up --build -d
 Use this lab to:
 
 - Execute a **4-agent loan processing chain** with live LLM reasoning
-- Launch **ten adversarial attack scenarios** across the agentic threat lifecycle
-- Enforce **DefenseClaw / CodeGuard** runtime policy controls (lab regex middleware — see [plain-language section](#defenseclaw-and-codeguard--full-transparency))
+- Launch **ten campaign-week adversarial scenarios** across real workflow surfaces (tools, RAG, A2A, memory, orchestration)
+- Enforce **layered runtime controls** — see [USAGE_GUIDE](docs/USAGE_GUIDE.md)
 - Validate **Splunk ES detection rules** against `otel:agentic:json` telemetry
 
 > **First boot:** LLM works after Ollama pulls the model. Splunk dashboards work only after you install the compliance app and create the index — not automatically on `docker compose up`.
@@ -248,7 +277,8 @@ Use this lab to:
 
 ## Table of Contents
 
-1. [How Everything Works (Plain Language)](#how-everything-works-plain-language)
+1. [A+ Lab — What Changed](#a-lab--what-changed-v31)
+2. [How Everything Works (Plain Language)](#how-everything-works-plain-language)
 2. [What This Project Is — and Is Not](#what-this-project-is--and-is-not)
 3. [Honest Limitations](#honest-limitations)
 4. [Why It Exists](#why-it-exists--the-agent-security-problem)
@@ -486,22 +516,22 @@ curl -X POST http://localhost:5001/api/chains/KC-C001/execute \
   -d '{"accelerated": true, "hybrid_live": true}'
 ```
 
-Ten interactive scenarios in the **Agentic Threat Lifecycle Console** (Top 10 tab), each sending a **real adversarial payload** to a targeted banking agent via `POST /api/v1/agent/<agent_id>`:
+Ten **campaign-week** scenarios (W1–W10) in the attack panel, each targeting a **workflow surface** and emitting **NIST control evidence**:
 
-| Scenario | Focus | Framework Mapping |
-|----------|-------|-------------------|
-| AI BOM Prompt Drift | System prompt override | LLM01 · AML.T0051 |
-| Foundry Spec Trace | Orchestrator policy bypass | LLM09 · AML.T0043 |
-| CodeGuard Breach | Unsanitised markup injection | LLM03 · AML.T0048 |
-| Runtime Prompt Injection | DAN persona jailbreak | LLM01 · AML.T0054 |
-| MCP Tool Scope Escape | Shell RCE via tool abuse | LLM06 · AML.T0050 |
-| Algorithmic DoS | Recursive loop injection | LLM10 · AML.T0040 |
-| Identity Fracture | A2A DID spoofing | LLM08 · AML.T0058 |
-| Vector DB Exfiltration | Embedding space probe | LLM02 · AML.T0038 |
-| HITL Bypass | Alert fatigue exploitation | LLM07 · AML.T0052 |
-| Rogue Agent | Autonomous self-direction | LLM04 · AML.T0026 |
+| Week | Scenario | Surface | Block layer |
+|------|----------|---------|-------------|
+| W1 | Code Compliance Illusion | AI-BOM / prompt drift | AIBOM telemetry |
+| W2 | Agentic Evaluation Harness | Orchestration | `orchestration_guard` |
+| W3 | Secure-by-Default Vibe Coding | Prompt / markup | `codeguard` |
+| W4 | Shadow AI at the Edge | Unapproved SLM | Asset discovery |
+| W5 | Guarding the Front Desk | Semantic jailbreak | `defenseclaw` |
+| W6 | Intern with the Master Key | MCP tools | `mcp_gateway` |
+| W7 | The Infinity Bill | Token recursion | `call_depth_detected` |
+| W8 | Identity Fracture | A2A DID | `a2a_verifier` |
+| W9 | The Invisible Leak | RAG exfil | `galileo_observe` |
+| W10 | Self-Healing SOC | Memory + rogue agent | `memory_policy` + SOAR |
 
-Outcomes depend on live model behaviour — blocked attacks produce DefenseClaw/CodeGuard telemetry in Splunk; successful injections are also logged for detection gap analysis.
+Full step-by-step: **[docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md)**.
 
 ### 4. Splunk Compliance Apps
 
@@ -631,6 +661,8 @@ If the last two steps fail, see [HEC Token Alignment](#hec-token-alignment) and 
 ---
 
 ## Usage Guide
+
+> **Detailed guide:** [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) — campaign weeks, Splunk macros, blog demo scripts.
 
 ### A. Run a Legitimate Banking Transaction
 

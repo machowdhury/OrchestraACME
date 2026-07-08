@@ -313,6 +313,7 @@ def call_ollama(
     incident_id: Optional[str] = None,
     technique_id: str = "",
     testbed_mode: str = "BANKING_LIVE",
+    campaign_week: int = 0,
 ) -> dict:
     """
     Make a real HTTP request to the local Ollama LLM and instrument with
@@ -332,6 +333,54 @@ def call_ollama(
         }
     """
     incident_id = incident_id or f"ACME-INC-{uuid.uuid4().hex[:8].upper()}"
+
+    from framework.workflow_guard import run_workflow_guards
+    from framework.control_validator import evaluate_controls, control_summary, control_otel_fields
+    from framework.soar_simulator import trigger_containment, soar_otel_fields
+
+    workflow = run_workflow_guards(
+        user_message, agent_id, session_id, _OLLAMA_MODEL, incident_id, campaign_week,
+    )
+
+    # --- Workflow guard (tools, A2A, memory, orchestration) ---
+    if workflow.blocked:
+        wf_log = {
+            "event_type":              "WORKFLOW_GUARD_BLOCK",
+            "severity":                "CRITICAL",
+            "workflow.blocked":        "true",
+            "workflow.block_reason":   workflow.block_reason,
+            "workflow.surface":        workflow.workflow_surface,
+            "workflow.rule_id":      workflow.rule_id,
+            "agent.id":                agent_id,
+            "session.id":              session_id,
+            "incident_id":             incident_id,
+            "campaign_week":           str(campaign_week) if campaign_week else "",
+            "technique_id":            technique_id,
+            "gen_ai.request.model":    _OLLAMA_MODEL,
+            "gen_ai.operation.name":   "chat",
+            "gen_ai.system":           "ollama",
+            "testbed_mode":            testbed_mode,
+            "timestamp_iso":           datetime.datetime.utcnow().isoformat() + "Z",
+            **workflow.otel_fields,
+        }
+        controls = evaluate_controls(wf_log, campaign_week or None)
+        wf_log.update(control_otel_fields(controls))
+        _emit_log_record(wf_log, severity="CRITICAL")
+        return {
+            "response":           f"[WORKFLOW GUARD] {workflow.block_reason}: {workflow.rule_id}",
+            "input_tokens":       0,
+            "output_tokens":      0,
+            "latency_ms":         0,
+            "model":              _OLLAMA_MODEL,
+            "defenseclaw_blocked": False,
+            "codeguard_blocked":  False,
+            "workflow_blocked":   True,
+            "block_reason":       workflow.block_reason,
+            "workflow_surface":   workflow.workflow_surface,
+            "trace_id":           "",
+            "incident_id":        incident_id,
+            "control_evidence":   control_summary(controls),
+        }
 
     # --- CodeGuard input validation ---
     codeguard_blocked = False
@@ -365,6 +414,7 @@ def call_ollama(
             "model":              _OLLAMA_MODEL,
             "defenseclaw_blocked": False,
             "codeguard_blocked":  True,
+            "workflow_blocked":   False,
             "trace_id":           "",
             "incident_id":        incident_id,
         }
@@ -484,7 +534,7 @@ def call_ollama(
                 )
 
         # Emit structured GenAI log record
-        _emit_log_record({
+        log_body = {
             # OTel GenAI semantic convention fields
             "gen_ai.operation.name":    "chat",
             "gen_ai.system":            "ollama",
@@ -500,6 +550,8 @@ def call_ollama(
             # Security fields
             "defenseclaw.action":       "HARD_DENY" if defenseclaw_blocked else "PASS",
             "codeguard.status":         "BLOCKED" if codeguard_blocked else "PASS",
+            "codeguard_blocked":        str(codeguard_blocked).lower(),
+            "defenseclaw_blocked":      str(defenseclaw_blocked).lower(),
             # Context
             "session.id":               session_id,
             "incident_id":              incident_id,
@@ -507,11 +559,24 @@ def call_ollama(
             "technique_id":             technique_id,
             "framework.technique_id":   technique_id,
             "testbed_mode":             testbed_mode,
+            "campaign_week":            str(campaign_week) if campaign_week else "",
             # Preview of input/output (first 200 chars for forensics)
             "gen_ai.input.preview":     user_message[:200],
             "gen_ai.output.preview":    output_text[:200],
             "timestamp_iso":            datetime.datetime.utcnow().isoformat() + "Z",
-        }, severity="ERROR" if defenseclaw_blocked else "INFO", trace_id=trace_id_hex)
+            **workflow.otel_fields,
+        }
+
+        controls = evaluate_controls(log_body, campaign_week or None)
+        log_body.update(control_otel_fields(controls))
+
+        if campaign_week == 10 and (
+            defenseclaw_blocked or "AUTONOMOUS" in user_message.upper()
+        ):
+            soar = trigger_containment(agent_id, incident_id)
+            log_body.update(soar_otel_fields(soar))
+
+        _emit_log_record(log_body, severity="ERROR" if defenseclaw_blocked else "INFO", trace_id=trace_id_hex)
 
         span.set_status(StatusCode.OK if not defenseclaw_blocked else StatusCode.ERROR)
 
@@ -523,8 +588,11 @@ def call_ollama(
             "model":               response_model,
             "defenseclaw_blocked": defenseclaw_blocked,
             "codeguard_blocked":   codeguard_blocked,
+            "workflow_blocked":    False,
+            "workflow_surface":    workflow.workflow_surface,
             "trace_id":            trace_id_hex,
             "incident_id":         incident_id,
+            "control_evidence":    control_summary(controls),
         }
 
 

@@ -1,0 +1,113 @@
+# NIST AI RMF control evidence matrix — measurable pass/fail per function.
+# Each control maps to OTel detection signals emitted by OrchestraACME workflow guards.
+
+controls:
+  - id: CTRL-W1-AIBOM
+    nist_function: GOVERN
+    nist_subcategory: GOVERN-6.1
+    campaign_week: 1
+    attack_class: supply_chain_drift
+    workflow_surface: orchestration
+    description: AI-BOM manifest hash matches approved agent artifact
+    pass_signal: agent.aibom_validated=true
+    fail_signal: cisco_aibom_status=PROMPT_DRIFT_DETECTED
+    splunk_macro: acme_campaign_w1
+
+  - id: CTRL-W2-FOUNDRY
+    nist_function: MEASURE
+    nist_subcategory: MEASURE-2.6
+    campaign_week: 2
+    attack_class: orchestration_bypass
+    workflow_surface: orchestration
+    description: Foundry eval harness rejects unauthorized orchestrator override
+    pass_signal: foundry.policy_status=ENFORCED
+    fail_signal: foundry.orchestrator_override=true
+    splunk_macro: acme_campaign_w2
+
+  - id: CTRL-W3-CODEGUARD
+    nist_function: MANAGE
+    nist_subcategory: MANAGE-2.4
+    campaign_week: 3
+    attack_class: insecure_codegen
+    workflow_surface: prompt
+    description: CodeGuard blocks unsanitized markup in agent input
+    pass_signal: codeguard.status=PASS
+    fail_signal: codeguard_blocked=true
+    splunk_macro: acme_campaign_w3
+
+  - id: CTRL-W4-SLM
+    nist_function: MAP
+    nist_subcategory: MAP-1.1
+    campaign_week: 4
+    attack_class: shadow_edge_slm
+    workflow_surface: runtime
+    description: Only approved models appear in gen_ai.request.model telemetry
+    pass_signal: slm.unapproved=false
+    fail_signal: slm.unapproved=true
+    splunk_macro: acme_campaign_w4
+
+  - id: CTRL-W5-DEFENSECLAW
+    nist_function: MANAGE
+    nist_subcategory: MANAGE-2.4
+    campaign_week: 5
+    attack_class: semantic_jailbreak
+    workflow_surface: prompt
+    description: Runtime gateway HARD_DENY on jailbreak execution signatures
+    pass_signal: defenseclaw.action=PASS
+    fail_signal: defenseclaw.action=HARD_DENY
+    splunk_macro: acme_campaign_w5
+
+  - id: CTRL-W6-MCP
+    nist_function: GOVERN
+    nist_subcategory: GOVERN-1.1
+    campaign_week: 6
+    attack_class: mcp_tool_abuse
+    workflow_surface: tools
+    description: MCP gateway blocks out-of-scope tool invocations
+    pass_signal: tool.scope_violation=false
+    fail_signal: tool.scope_violation=true
+    splunk_macro: acme_campaign_w6
+
+  - id: CTRL-W7-TOKEN
+    nist_function: MEASURE
+    nist_subcategory: MEASURE-2.5
+    campaign_week: 7
+    attack_class: recursive_token_weaponization
+    workflow_surface: orchestration
+    description: Token surge / recursive depth stays within budget thresholds
+    pass_signal: call_depth_detected<5
+    fail_signal: call_depth_detected>=5
+    splunk_macro: acme_campaign_w7
+
+  - id: CTRL-W8-A2A
+    nist_function: GOVERN
+    nist_subcategory: GOVERN-1.1
+    campaign_week: 8
+    attack_class: a2a_identity_spoof
+    workflow_surface: a2a
+    description: Cross-enclave delegation requires valid cryptographic passport
+    pass_signal: cryptographic_passport_valid=true
+    fail_signal: cryptographic_passport_valid=false
+    splunk_macro: acme_campaign_w8
+
+  - id: CTRL-W9-RAG
+    nist_function: MEASURE
+    nist_subcategory: MEASURE-2.10
+    campaign_week: 9
+    attack_class: rag_knowledge_exfil
+    workflow_surface: rag
+    description: Galileo-style anomaly detection on retrieval exfiltration probes
+    pass_signal: galileo_observe_alert=false
+    fail_signal: galileo_observe_alert=true
+    splunk_macro: acme_campaign_w9
+
+  - id: CTRL-W10-SOAR
+    nist_function: MANAGE
+    nist_subcategory: MANAGE-4.1
+    campaign_week: 10
+    attack_class: autonomous_agent_escape
+    workflow_surface: memory
+    description: SOAR containment triggers on rogue autonomous agent behavior
+    pass_signal: containment.action=QUARANTINE
+    fail_signal: memory.policy.rule_id=MEM-POL-*
+    splunk_macro: acme_campaign_w10

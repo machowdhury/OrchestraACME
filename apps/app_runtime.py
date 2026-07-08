@@ -89,6 +89,7 @@ def call_single_agent(agent_id):
         incident_id=data.get("incident_id"),
         technique_id=data.get("technique_id", ""),
         testbed_mode=data.get("testbed_mode", "BANKING_LIVE"),
+        campaign_week=int(data.get("campaign_week", 0) or 0),
     )
     return jsonify({**result, "agent_id": agent_id, "agent_name": agent["name"]})
 
@@ -411,6 +412,26 @@ checkOllama();
 
 from framework.api_routes import register_chain_routes, register_framework_routes
 from framework.dataset_exporter import register_export_routes
+from framework.campaign_manifest import get_all_campaign_weeks
+from framework.attack_payloads import EMERGING_ATTACK_CLASSES
+from framework.control_validator import evaluate_controls, control_summary
+
+@app.route("/api/v1/campaign/weeks", methods=["GET"])
+def campaign_weeks():
+    return jsonify({
+        "weeks": [w.to_dict() for w in get_all_campaign_weeks()],
+        "emerging_attack_classes": EMERGING_ATTACK_CLASSES,
+    })
+
+
+@app.route("/api/v1/controls/evaluate", methods=["POST"])
+def evaluate_control_evidence():
+    data = request.get_json() or {}
+    fields = data.get("fields", {})
+    week = int(data.get("campaign_week", 0) or 0)
+    evaluations = evaluate_controls(fields, week or None)
+    return jsonify(control_summary(evaluations))
+
 
 register_framework_routes(app)
 register_chain_routes(app)

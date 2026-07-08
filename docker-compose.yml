@@ -65,8 +65,8 @@ services:
   # ---------------------------------------------------------------------------
   banking_app:
     build:
-      context: ./apps
-      dockerfile: Dockerfile.banking
+      context: .
+      dockerfile: apps/Dockerfile.banking
     container_name: acme_banking_app
     ports:
       - "5000:5000"
@@ -105,8 +105,8 @@ services:
   # ---------------------------------------------------------------------------
   attack_panel:
     build:
-      context: ./apps
-      dockerfile: Dockerfile.attack
+      context: .
+      dockerfile: apps/Dockerfile.attack
     container_name: acme_attack_panel
     ports:
       - "5001:5001"

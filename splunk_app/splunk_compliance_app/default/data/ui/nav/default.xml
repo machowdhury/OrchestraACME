@@ -1,6 +1,8 @@
 <nav search_view="search" color="#0d47a1">
   <view name="splunk_cloud_setup" label="Setup Guide"/>
   <view name="compliance_overview" default="true" label="Overview"/>
+  <view name="detection_efficacy" label="Detection Efficacy"/>
+  <view name="control_attestation" label="Control Attestation"/>
   <view name="technique_coverage_matrix" label="Technique Coverage"/>
   <view name="threat_hunting" label="Threat Hunting"/>
   <view name="actor_chain_narrative" label="Actor Chain Story"/>

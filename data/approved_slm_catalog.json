@@ -1,0 +1,10 @@
+{
+  "catalog_version": "1.0",
+  "approved_models": [
+    {"model_id": "llama3.2:1b", "runtime": "ollama", "tier": "approved", "enclave": "datacenter"},
+    {"model_id": "llama3.2:3b", "runtime": "ollama", "tier": "approved", "enclave": "datacenter"}
+  ],
+  "shadow_models": [
+    {"model_id": "phi3-mini-edge-unapproved", "runtime": "edge", "tier": "shadow", "enclave": "endpoint"}
+  ]
+}

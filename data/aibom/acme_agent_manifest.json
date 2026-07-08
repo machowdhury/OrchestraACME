@@ -1,0 +1,27 @@
+{
+  "manifest_version": "1.0",
+  "vendor": "ACME Banking Group",
+  "generated_at": "2026-01-15T00:00:00Z",
+  "agents": {
+    "acme-agent-intake-001": {
+      "model_artifact_hash": "sha256:acme-intake-llama3.2-v1",
+      "approved": true,
+      "model": "llama3.2:1b"
+    },
+    "acme-agent-docingest-002": {
+      "model_artifact_hash": "sha256:acme-docingest-llama3.2-v1",
+      "approved": true,
+      "model": "llama3.2:1b"
+    },
+    "acme-agent-creditrisk-003": {
+      "model_artifact_hash": "sha256:acme-creditrisk-llama3.2-v1",
+      "approved": true,
+      "model": "llama3.2:1b"
+    },
+    "acme-agent-compliance-004": {
+      "model_artifact_hash": "sha256:acme-compliance-llama3.2-v1",
+      "approved": true,
+      "model": "llama3.2:1b"
+    }
+  }
+}
