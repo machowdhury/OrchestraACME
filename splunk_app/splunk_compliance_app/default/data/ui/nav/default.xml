@@ -6,7 +6,7 @@
   <view name="technique_coverage_matrix" label="Technique Coverage"/>
   <view name="threat_hunting" label="Threat Hunting"/>
   <view name="actor_chain_narrative" label="Actor Chain Story"/>
-  <view name="mitre_atlas_heatmap" label="MITRE ATLAS Heatmap"/>
+  <view name="mitre_atlas_heatmap" label="ATLAS Matrix Heatmap"/>
   <view name="killchain_timeline" label="Kill-Chain Timeline"/>
   <view name="nist_rmf_compliance" label="NIST AI RMF Scoring"/>
   <view name="dataset_export" label="Dataset Export"/>

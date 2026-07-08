@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark">
-  <label>MITRE ATLAS Coverage Heatmap</label>
-  <description>Full MITRE ATLAS technique coverage map across all 16 tactics. Drill into any technique for full detail and Splunk correlation search.</description>
+  <label>MITRE ATLAS Matrix Heatmap</label>
+  <description>ATT&amp;CK-style coverage matrix for MITRE ATLAS tactics and techniques. Shows GAP / OBSERVED / DETECTED per cell, tactic coverage %, and drilldown hunts. Run OrchestraACME Workshop → Deep Workshop to populate all lab-executable techniques. Reference: https://atlas.mitre.org/</description>
 
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time_range" searchWhenChanged="false">
@@ -8,96 +8,223 @@
       <default>
         <earliest>-7d</earliest>
         <latest>now</latest>
-      </latest>
       </default>
     </input>
-    <input type="dropdown" token="severity_filter" searchWhenChanged="false">
-      <label>Severity Filter</label>
-      <choice value="*">All Severities</choice>
-      <choice value="Critical">Critical Only</choice>
-      <choice value="High">High+</choice>
+    <input type="dropdown" token="status_filter" searchWhenChanged="false">
+      <label>Status Filter</label>
+      <choice value="*">All</choice>
+      <choice value="GAP">Gaps only (not observed)</choice>
+      <choice value="OBSERVED">Observed only</choice>
+      <choice value="DETECTED">Detected / blocked only</choice>
       <default>*</default>
     </input>
   </fieldset>
 
+  <!-- KPI row -->
   <row>
     <panel>
       <single>
-        <title>Unique ATLAS Techniques Observed</title>
+        <title>Lab Catalog Coverage %</title>
         <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.technique_id=AML.*
-| stats dc(framework.technique_id) as count</query>
+          <query>| inputlookup acme_framework_lookup | stats count as expected
+| appendcols [ search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+    | stats dc(technique_id) as observed ]
+| eval coverage_pct=round(100*observed/expected,1) | fields coverage_pct</query>
         </search>
         <option name="drilldown">none</option>
         <option name="colorBy">value</option>
         <option name="colorMode">block</option>
-        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
-        <option name="rangeValues">[0,10,25]</option>
+        <option name="rangeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="rangeValues">[25,50]</option>
         <option name="useColors">1</option>
       </single>
     </panel>
     <panel>
       <single>
-        <title>ATLAS Tactics Observed</title>
+        <title>Tactics With Evidence</title>
         <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.tactic_id=AML.*
-| stats dc(framework.tactic_id) as count</query>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ technique_id=AML.*
+| lookup acme_framework_lookup technique_id OUTPUT tactic_id
+| stats dc(tactic_id) as count</query>
         </search>
         <option name="drilldown">none</option>
       </single>
     </panel>
     <panel>
       <single>
-        <title>Avg CVSS Score Observed</title>
+        <title>Techniques Detected / Blocked</title>
         <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.cvss_score=*
-| stats avg(framework.cvss_score) as avg_cvss
-| eval avg_cvss=round(avg_cvss,2)</query>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ technique_id=AML.*
+(defenseclaw_blocked=true OR codeguard_blocked=true OR workflow.blocked=true)
+| stats dc(technique_id) as count</query>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <title>Gap Count (Not Observed)</title>
+        <search>
+          <query>| inputlookup acme_framework_lookup | fields technique_id
+| join type=left technique_id [
+    search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+    | stats count as events by technique_id
+  ]
+| where isnull(events) OR events=0
+| stats count as gaps</query>
         </search>
         <option name="drilldown">none</option>
         <option name="colorBy">value</option>
         <option name="colorMode">block</option>
-        <option name="rangeColors">["0x53a051","0xf8be34","0xf1813f","0xdc4e41"]</option>
-        <option name="rangeValues">[0,4,7,9]</option>
+        <option name="rangeColors">["0x53a051","0xf8be34","0xdc4e41"]</option>
+        <option name="rangeValues">[5,15]</option>
         <option name="useColors">1</option>
-      </single>
-    </panel>
-    <panel>
-      <single>
-        <title>Real-World Incidents Triggered</title>
-        <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.real_world_incident=* NOT framework.real_world_incident=""
-| stats dc(framework.technique_id) as count</query>
-        </search>
-        <option name="drilldown">none</option>
       </single>
     </panel>
   </row>
 
+  <!-- Tactic coverage strip (like ATT&CK heatmap tactic row) -->
+  <row>
+    <panel>
+      <title>MITRE ATLAS Tactic Coverage (16 tactics)</title>
+      <table>
+        <search>
+          <query>| inputlookup acme_framework_lookup
+| stats count as expected by tactic_id tactic_name
+| join type=left tactic_id [
+    search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ technique_id=AML.*
+    | lookup acme_framework_lookup technique_id OUTPUT tactic_id
+    | stats dc(technique_id) as observed by tactic_id
+  ]
+| join type=left tactic_id [
+    search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ technique_id=AML.*
+      (defenseclaw_blocked=true OR codeguard_blocked=true OR workflow.blocked=true)
+    | lookup acme_framework_lookup technique_id OUTPUT tactic_id
+    | stats dc(technique_id) as detected by tactic_id
+  ]
+| lookup acme_atlas_tactics_lookup tactic_id OUTPUT tactic_order
+| eval observed=coalesce(observed,0), detected=coalesce(detected,0)
+| eval coverage_pct=if(expected&gt;0,round(100*observed/expected,0),0)
+| eval tactic_bar=case(coverage_pct=0,"░░░░░░░░░░",coverage_pct&lt;25,"█░░░░░░░░░",coverage_pct&lt;50,"██░░░░░░░░",coverage_pct&lt;75,"█████░░░░░",coverage_pct&lt;100,"███████░░░",1=1,"██████████")
+| sort tactic_order
+| table tactic_order tactic_name tactic_id expected observed detected coverage_pct tactic_bar
+| rename tactic_order AS "#", tactic_name AS "Tactic", tactic_id AS "ID", expected AS "In Catalog", observed AS "Observed", detected AS "Blocked/Detected", coverage_pct AS "Coverage %", tactic_bar AS "Heat"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="wrap">false</option>
+        <format type="color" field="Coverage %">
+          <colorPalette type="minMidMax" minColor="#dc4e41" midColor="#f8be34" maxColor="#53a051"/>
+          <scale type="minMidMax" minValue="0" midValue="50" maxValue="100"/>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Matrix heatmap chart -->
   <row>
     <panel>
       <chart>
-        <title>ATLAS Technique Frequency Heatmap by Tactic</title>
+        <title>Technique × Tactic Heatmap (0=GAP, 1=OBSERVED, 2=DETECTED)</title>
         <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.tactic_name=* framework.technique_id=AML.*
-| stats count by framework.tactic_name framework.technique_id
-| eval label=framework.tactic_name + " / " + framework.technique_id
-| sort -count</query>
+          <query>| inputlookup acme_framework_lookup
+| lookup acme_atlas_tactics_lookup tactic_id OUTPUT tactic_order
+| join type=left technique_id [
+    search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+    | stats count as events,
+        sum(eval(if(defenseclaw_blocked=true OR codeguard_blocked=true OR workflow.blocked=true,1,0))) as blocks
+      by technique_id
+  ]
+| eval heat_score=case(isnull(events) OR events=0,0, blocks&gt;0,2, events&gt;0,1, 1=1,0)
+| eval short_name=technique_id." ".substr(technique_name,1,28)
+| sort tactic_order technique_id
+| chart max(heat_score) over short_name by tactic_name</query>
         </search>
-        <option name="charting.chart">bubble</option>
+        <option name="charting.chart">heatmap</option>
         <option name="charting.drilldown">none</option>
-        <option name="charting.fieldColors">{"count": 0x00b4ff}</option>
-        <option name="charting.axisTitleX.text">Tactic</option>
-        <option name="charting.axisTitleY.text">Technique</option>
+        <option name="charting.axisTitleX.text">Technique</option>
+        <option name="charting.axisTitleY.text">Tactic</option>
+        <option name="charting.legend.placement">top</option>
+        <option name="charting.seriesColors">["0x3a3f4b","0x00b4ff","0xdc4e41"]</option>
       </chart>
     </panel>
   </row>
 
+  <!-- Full matrix table with drilldown (practical hunting) -->
+  <row>
+    <panel>
+      <title>ATLAS Technique Matrix — full catalog with hunt drilldown</title>
+      <table>
+        <search>
+          <query>| inputlookup acme_framework_lookup
+| lookup acme_atlas_tactics_lookup tactic_id OUTPUT tactic_order
+| join type=left technique_id [
+    search `acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
+    | stats count as events, dc(incident_id) as incidents, latest(_time) as last_seen,
+        sum(eval(if(defenseclaw_blocked=true OR codeguard_blocked=true OR workflow.blocked=true,1,0))) as blocks
+      by technique_id
+  ]
+| lookup acme_technique_playbooks_lookup technique_id OUTPUT execution_mode is_top_10 threat_hunt_spl
+| eval events=coalesce(events,0), blocks=coalesce(blocks,0)
+| eval matrix_status=case(events=0,"GAP", blocks&gt;0,"DETECTED", events&gt;0,"OBSERVED", 1=1,"GAP")
+| eval lab_action=case(is_top_10="true","Attack Panel → Top 10 Scenario", execution_mode="LIVE","Attack Panel → All 45 → EXECUTE", execution_mode="HYBRID","Attack Panel → All 45 → EXECUTE", 1=1,"Workshop → RUN ALL 45")
+| where if("$status_filter$"="*",1,matrix_status="$status_filter$")
+| sort tactic_order technique_id
+| table tactic_name technique_id technique_name matrix_status events blocks incidents severity cvss_score execution_mode is_top_10 lab_action last_seen
+| rename tactic_name AS "Tactic", technique_id AS "TechniqueID", technique_name AS "Technique",
+    matrix_status AS "Status", events AS "Events", blocks AS "Blocks", incidents AS "Incidents",
+    severity AS "Severity", cvss_score AS "CVSS", execution_mode AS "Lab Mode",
+    is_top_10 AS "Top-10", lab_action AS "Light Up In Lab", last_seen AS "Last Seen"</query>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">true</option>
+        <format type="color" field="Status">
+          <colorPalette type="map">{"GAP":#3a3f4b,"OBSERVED":#00b4ff,"DETECTED":#dc4e41}</colorPalette>
+        </format>
+        <format type="color" field="Severity">
+          <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">/app/acme_genai_compliance/search?q=`acme_genai_index`%20earliest=$time_range.earliest$%20latest=$time_range.latest$%20technique_id=$row.TechniqueID$%20%7C%20sort%20-_time</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <!-- Detection readiness (practical vs Splunkbase 8527) -->
+  <row>
+    <panel>
+      <title>Detection Readiness — field tiers for your index</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$ | head 5000
+| eval has_tier1=if(isnotnull(gen_ai.usage.input_tokens) OR isnotnull(technique_id) OR isnotnull(incident_id),1,0)
+| eval has_tier2=if(isnotnull(gen_ai.input.preview) OR isnotnull(gen_ai.output.preview) OR isnotnull(defenseclaw.action),1,0)
+| eval has_workflow=if(isnotnull(workflow.block_reason) OR isnotnull(tool.scope_violation) OR isnotnull(mcp.gateway.rule_id),1,0)
+| eval has_control=if(isnotnull(control.status) OR isnotnull(control.pass_rate_pct),1,0)
+| stats sum(has_tier1) as tier1_events sum(has_tier2) as tier2_events sum(has_workflow) as workflow_events sum(has_control) as control_events count as total
+| eval tier1_pct=round(100*tier1_events/total,1), tier2_pct=round(100*tier2_events/total,1)
+| eval readiness=case(tier2_pct&gt;=50 AND workflow_events&gt;0,"READY — content + workflow fields", tier1_pct&gt;=80,"PARTIAL — volume/technique fields only", 1=1,"SETUP — run Workshop First Win")
+| table total tier1_pct tier2_pct workflow_events control_events readiness
+| rename total AS "Sample Events", tier1_pct AS "Tier-1 Field %", tier2_pct AS "Tier-2 Field %",
+    workflow_events AS "Workflow Events", control_events AS "Control Events", readiness AS "Matrix Readiness"</query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    <panel>
+      <html>
+        <div style="padding:12px;font-size:13px;line-height:1.6;color:#c8d8e8">
+          <h3 style="color:#00ff9d;margin:0 0 8px 0">How this compares to Splunkbase apps</h3>
+          <p><strong><a href="https://splunkbase.splunk.com/app/5742" target="_blank">ATT&amp;CK Heatmap (5742)</a></strong> — custom viz for Enterprise ATT&amp;CK. This dashboard uses Splunk native heatmap + matrix table for <strong>MITRE ATLAS</strong> with GAP/OBSERVED/DETECTED states tied to OrchestraACME telemetry.</p>
+          <p><strong><a href="https://splunkbase.splunk.com/app/8527" target="_blank">ATLAS AI Threat Detection (8527)</a></strong> — 10 generic SPL rules for production LLM logs. OrchestraACME adds <strong>45 reproducible lab playbooks</strong>, Workshop paths, kill chains, NIST attestation, and hunts that light up after you click attacks.</p>
+          <p><strong>Full ATLAS catalog:</strong> Lab ships <strong>45 executable techniques</strong> across <strong>16 tactics</strong>. Official <a href="https://atlas.mitre.org/" target="_blank">MITRE ATLAS</a> is larger — expand via future STIX sync; gaps show as <code>GAP</code> until fired or enriched.</p>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+  <!-- Legacy detail panels -->
   <row>
     <panel>
       <chart>
@@ -110,102 +237,20 @@ framework.kill_chain_stage=*
         </search>
         <option name="charting.chart">pie</option>
         <option name="charting.drilldown">none</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.seriesColors">["0xdc4e41","0xf1813f","0xf8be34","0x53a051","0x00b4ff","0xcc5de8","0xff6b6b","0x38d9a9"]</option>
       </chart>
     </panel>
     <panel>
       <chart>
-        <title>CVSS Score Distribution</title>
+        <title>CVSS Distribution (observed)</title>
         <search>
           <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
 framework.cvss_score=*
-| eval cvss_bucket=case(framework.cvss_score>=9.0,"9.0-10.0 Critical",framework.cvss_score>=7.0,"7.0-8.9 High",framework.cvss_score>=4.0,"4.0-6.9 Medium",1=1,"0-3.9 Low")
-| stats count by cvss_bucket
-| sort cvss_bucket</query>
+| eval cvss_bucket=case(framework.cvss_score&gt;=9.0,"Critical 9+",framework.cvss_score&gt;=7.0,"High 7-8.9",framework.cvss_score&gt;=4.0,"Medium 4-6.9",1=1,"Low")
+| stats count by cvss_bucket</query>
         </search>
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
-        <option name="charting.chart.showDataLabels">all</option>
-        <option name="charting.seriesColors">["0xdc4e41","0xf1813f","0xf8be34","0x53a051"]</option>
-        <option name="charting.axisTitleX.text">CVSS Range</option>
-        <option name="charting.axisTitleY.text">Event Count</option>
       </chart>
-    </panel>
-    <panel>
-      <chart>
-        <title>Attack Vector Distribution</title>
-        <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.attack_vector=*
-| stats count by framework.attack_vector
-| sort -count</query>
-        </search>
-        <option name="charting.chart">pie</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.legend.placement">right</option>
-      </chart>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <table>
-        <title>Full ATLAS Technique Detail Table</title>
-        <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.technique_id=AML.* framework.severity=$severity_filter$
-| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(agent.id) AS agents, values(defenseclaw_action) AS dc_actions, values(agent.id) AS agent_list
-  BY framework.technique_id framework.technique_name framework.tactic_name framework.kill_chain_stage framework.severity
-| eval max_cvss=round(max_cvss,1)
-| eval agents_str=mvjoin(agent_list," | ")
-| eval dc_str=mvjoin(dc_actions," | ")
-| sort -max_cvss
-| table framework.technique_id framework.technique_name framework.tactic_name framework.kill_chain_stage framework.severity max_cvss events agents dc_str
-| rename framework.technique_id AS "Technique ID", framework.technique_name AS "Technique Name",
-  framework.tactic_name AS "Tactic", framework.kill_chain_stage AS "Kill-Chain Stage",
-  framework.severity AS "Severity", max_cvss AS "Max CVSS",
-  events AS "Events", agents AS "Agents", dc_str AS "DefenseClaw Actions"</query>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="wrap">false</option>
-        <option name="rowNumbers">true</option>
-        <format type="color" field="Severity">
-          <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
-        </format>
-        <format type="color" field="Max CVSS">
-          <colorPalette type="minMidMax" maxColor="#dc4e41" minColor="#53a051" midColor="#f8be34"/>
-          <scale type="minMidMax" minValue="0" midValue="5" maxValue="10"/>
-        </format>
-      </table>
-    </panel>
-  </row>
-
-  <row>
-    <panel>
-      <table>
-        <title>CSA MAESTRO Layer Risk Map</title>
-        <search>
-          <query>`acme_genai_index` earliest=$time_range.earliest$ latest=$time_range.latest$
-framework.maestro_layers=*
-| mvexpand framework.maestro_layers
-| search framework.maestro_layers=L*
-| stats count AS events, max(framework.cvss_score) AS max_cvss, dc(framework.technique_id) AS techniques
-  BY framework.maestro_layers
-| lookup acme_maestro_layers_lookup layer_id AS framework.maestro_layers OUTPUTNEW name description
-| eval max_cvss=round(max_cvss,1)
-| eval risk_level=case(max_cvss>=9.0,"🔴 CRITICAL",max_cvss>=7.0,"🟠 HIGH",max_cvss>=4.0,"🟡 MEDIUM",1=1,"🟢 LOW")
-| sort framework.maestro_layers
-| table framework.maestro_layers name risk_level events techniques max_cvss description
-| rename framework.maestro_layers AS "Layer", name AS "Layer Name", risk_level AS "Risk Level",
-  events AS "Events", techniques AS "Techniques", max_cvss AS "Max CVSS", description AS "Description"</query>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="wrap">true</option>
-        <format type="color" field="Risk Level">
-          <colorPalette type="map">{"🔴 CRITICAL":#dc4e41,"🟠 HIGH":#f1813f,"🟡 MEDIUM":#f8be34,"🟢 LOW":#53a051}</colorPalette>
-        </format>
-      </table>
     </panel>
   </row>
 

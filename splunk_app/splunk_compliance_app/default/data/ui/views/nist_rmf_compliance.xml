@@ -180,7 +180,7 @@
   [search `acme_genai_index` earliest=-30d latest=-7d agent.id=*
   | stats avg(framework.cvss_score) AS baseline_avg BY agent.id]
 | eval cvss_delta=round(recent_avg-baseline_avg,2)
-| eval drift=case(cvss_delta>2.0,"🔴 SIGNIFICANT DRIFT",cvss_delta>0.5,"🟠 MILD DRIFT",cvss_delta<-0.5,"🟢 IMPROVING",1=1,"🟡 STABLE")
+| eval drift=case(cvss_delta&gt;2.0,"🔴 SIGNIFICANT DRIFT",cvss_delta&gt;0.5,"🟠 MILD DRIFT",cvss_delta&lt;-0.5,"🟢 IMPROVING",1=1,"🟡 STABLE")
 | eval recent_avg=round(recent_avg,2), baseline_avg=round(baseline_avg,2)
 | sort -cvss_delta
 | table agent.id recent_avg baseline_avg cvss_delta drift recent_events recent_ttps

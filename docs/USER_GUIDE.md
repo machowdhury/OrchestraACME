@@ -27,7 +27,7 @@ Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firin
 
 **Splunk quick checklist** (do once):
 
-1. `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-2.2.0.tar.gz`
+1. `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-2.3.0.tar.gz`
 2. Index `acme_agentic_telemetry` + HEC token → sourcetype `otel:agentic:json`
 3. Verify: `` index=acme_agentic_telemetry earliest=-15m | stats count ``
 
@@ -369,6 +369,271 @@ After each action: wait **30–60 seconds**.
 ### Macro tweak
 
 If Search has data but dashboards are empty, edit macro **`acme_genai_index`** to match your index name.
+
+---
+
+## GenAI Compliance Monitor — dashboard & visualization guide
+
+**App name in Splunk:** GenAI Compliance Monitor (`acme_genai_compliance` v2.3+)  
+**Install:** `./scripts/package_splunk_app.sh` → `dist/acme_genai_compliance-2.3.0.tar.gz`  
+**Validate (Cloud/Enterprise):** `./scripts/validate_splunk_app.sh` — see [splunk_app/CLOUD_VETTING.md](../splunk_app/CLOUD_VETTING.md)
+
+All dashboards read `` `acme_genai_index` `` (default: `index=acme_agentic_telemetry sourcetype="otel:agentic:json"`). Empty panels mean no telemetry yet — run a Workshop path first.
+
+**Note:** Scheduled detection saved searches ship **disabled** for Splunk Cloud-safe install. Enable them under **Settings → Searches, reports, and alerts** after HEC ingest is verified (see **Setup Guide** dashboard).
+
+### Navigation map
+
+| # | Menu label | Primary audience | One-line purpose |
+|---|------------|------------------|------------------|
+| 1 | **Setup Guide** | Admin | HEC, index, macros, Splunk Cloud wiring |
+| 2 | **Overview** | Everyone | “Is the lab alive?” — event volume, severity, agents |
+| 3 | **Detection Efficacy** | Detection engineer | Coverage %, MTTD, workflow blocks, chain completeness |
+| 4 | **Control Attestation** | GRC / risk | NIST pass/fail per scenario (campaign week) |
+| 5 | **Technique Coverage** | Purple team | OBSERVED vs NOT_OBSERVED for all 45 techniques |
+| 6 | **Threat Hunting** | SOC analyst | Per-technique SPL playbooks + live results |
+| 7 | **Actor Chain Story** | Leadership / SOC | Rogue-actor narrative per `incident_id` |
+| 8 | **ATLAS Matrix Heatmap** | Framework mapping | Tactic×technique matrix (GAP / OBSERVED / DETECTED) |
+| 9 | **Kill-Chain Timeline** | Incident responder | Forensic timeline per kill-chain incident |
+| 10 | **NIST AI RMF Scoring** | Compliance | OWASP / NIST / MAESTRO posture scores |
+| 11 | **Dataset Export** | ML / research | HuggingFace export readiness |
+| 12 | **Search** | Power user | Raw SPL |
+
+### Status colors used across the app
+
+| Label / color | Meaning |
+|---------------|---------|
+| **GAP** / grey | Technique in catalog but **no events** in time range — run lab attack to fill |
+| **OBSERVED** / blue | Technique fired; telemetry exists (may or may not be blocked) |
+| **DETECTED** / red | Technique observed **and** blocked (`workflow`, CodeGuard, or DefenseClaw) |
+| **NOT_OBSERVED** / green (OWASP tables) | Risk category with **no** matching events (good for compliance score) |
+| **ACTIVE** / yellow–red (OWASP) | Risk category seen in telemetry |
+| **PASS / FAIL** (Control Attestation) | NIST control evidence from `control.status` |
+| **NOT_TESTED** | Scenario never fired in time range |
+
+---
+
+### 1 — Setup Guide
+
+Static HTML walkthrough (not data-driven).
+
+| Section | What it means |
+|---------|----------------|
+| Package & install | Build `.tar.gz` from repo; upload to Splunk Cloud or Enterprise |
+| Index + HEC | Create `acme_agentic_telemetry` and token for `otel:agentic:json` |
+| OTel collector | Point OrchestraACME `.env` at your HEC endpoint |
+| Macros | Edit `` `acme_genai_index` `` if your index name differs |
+| Health check SPL | Verify events before opening other dashboards |
+
+**Light up:** Complete once per environment. No attacks required.
+
+---
+
+### 2 — Overview (default landing page)
+
+**Purpose:** Prove ingest works and show high-level security posture.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Total Security Events (7d) | Single value | All agentic OTel events — **>0 means pipeline works** |
+| Critical Severity Events | Single value | Events tagged `framework.severity=Critical` |
+| Active Kill-Chain Incidents | Single value | Distinct `incident_id` with `testbed_mode=KILL_CHAIN_ACTIVE` |
+| DefenseClaw HARD_DENY Blocks | Single value | Output-side blocks in last 24h |
+| Unique Agents Monitored | Single value | How many `agent.id` values sent telemetry |
+| Security Events Over Time by Severity | Stacked area chart | Attack/benign traffic trend by severity |
+| Events by MITRE ATLAS Tactic | Bar chart | Which [ATLAS tactics](https://atlas.mitre.org/) appear most in your data |
+| OWASP LLM Top 10 — Active Risk Status | Table | LLM01–LLM10: NOT OBSERVED vs ACTIVE vs CRITICAL ACTIVE |
+| OWASP ASI Agentic Top 10 — Active Risk Status | Table | ASI01–ASI10 agentic risks |
+| Top 10 Agents by Risk Score | Table | Agents ranked by max CVSS and technique diversity |
+| Recent DefenseClaw Actions | Table | Last 20 output-gateway decisions (HARD_DENY, ALERT, etc.) |
+
+**Light up:** Banking app benign loan **or** Workshop **First Win**.  
+**Best for:** First demo slide — “we have telemetry.”
+
+---
+
+### 3 — Detection Efficacy
+
+**Purpose:** Measurable detection program metrics (not just event counts).
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Technique Coverage % | Single % | Observed techniques ÷ 45 catalog entries |
+| MTTD (seconds, blocked events) | Single value | Avg time to block (workflow/CodeGuard/DefenseClaw) |
+| Chain Incidents | Single value | Count of `ACME-INC-*` correlated incidents |
+| Control Pass Rate % | Single % | Latest `control.pass_rate_pct` from attestation |
+| Kill-Chain Stage Completeness | Table | Per `incident_id`: how many kill-chain stages seen (HIGH/MEDIUM/LOW) |
+| Workflow Surface Blocks | Pie chart | Breakdown of `workflow.block_reason` (MCP, A2A, orchestration, memory) |
+| Campaign Week Activity | Chart | Events per `campaign_week` (Scenario 1–10) |
+
+**Light up:** **First Win** (workflow blocks) + **Standard Workshop** (chains) + **Deep Workshop** (coverage %).  
+**Best for:** “We can measure agentic detection efficacy.”
+
+---
+
+### 4 — Control Attestation
+
+**Purpose:** Governance evidence — which NIST controls passed or failed per lab scenario.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Controls Passed / Failed | Single values | Sum of `control.pass_count` / `control.fail_count` |
+| Latest Pass Rate | Single % | Most recent `control.pass_rate_pct` |
+| NIST Control Matrix | Table | Each scenario (week 1–10): expected control, pass signal, **PASS / FAIL / NOT_TESTED** |
+
+Filters: time range, campaign week (Scenario 1–10).
+
+**Light up:** **FIRE ALL 10 SCENARIOS** or run scenarios individually.  
+**Best for:** Risk and compliance audiences.
+
+---
+
+### 5 — Technique Coverage
+
+**Purpose:** Practitioner matrix — every catalog technique vs your telemetry.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Techniques Observed | Single value | Count of distinct `technique_id` seen |
+| Coverage % | Single % | Observed ÷ 45 |
+| Top-10 Live Scenarios Fired | Single value | Techniques flagged `is_top_10=true` |
+| Full Technique Matrix | Table | Per technique: **OBSERVED / NOT_OBSERVED**, event count, incidents, LIVE/SIM/HYBRID mode |
+
+Filter: execution mode (LIVE / SIMULATED / HYBRID).
+
+**Light up:** **RUN ALL 45 TECHNIQUES** or **Deep Workshop**.  
+**Best for:** Purple-team backlog prioritization.
+
+---
+
+### 6 — Threat Hunting
+
+**Purpose:** Graduate from buttons to SPL — playbook-driven hunts.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Technique picker | Input | Filter by `technique_id` (e.g. `AML.T0050`) |
+| Playbook table | Table | Hunt SPL template, steps, rogue-actor story per technique |
+| Live hunt results | Table | Matching events for selected technique |
+| Block ratio stats | Table | Blocked vs total per technique |
+
+**Light up:** Any single scenario or technique **EXECUTE**.  
+**Best for:** SOC training — copy SPL into Search.
+
+---
+
+### 7 — Actor Chain Story
+
+**Purpose:** Tell a multi-stage attack story for one `incident_id`.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Active Threat Actor Incidents | Table | Per incident: threat actor profile, technique chain, stages seen, max CVSS — **click row to drill** |
+| Stage Timeline | Table | Chronological stages: technique, agents, risk statement, DefenseClaw action |
+
+Filter: chain ID (KC-A001 … KC-E001).
+
+**Light up:** **Standard Workshop** (KC-C001) or any **EXECUTE THREAT CHAIN**.  
+**Best for:** Leadership briefings — “here’s the attack story.”
+
+---
+
+### 8 — ATLAS Matrix Heatmap (v2.3+)
+
+**Purpose:** [MITRE ATLAS](https://atlas.mitre.org/)-style coverage matrix — more practical than generic Splunkbase apps for **this lab** because cells link to Attack Panel actions.
+
+Compared to [ATT&CK Heatmap (5742)](https://splunkbase.splunk.com/app/5742) and [ATLAS AI Detection (8527)](https://splunkbase.splunk.com/app/8527): see comparison table in [Light up](#light-up-the-splunk-compliance-app) above.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Lab Catalog Coverage % | Single % | Observed ÷ 45 executable techniques |
+| Tactics With Evidence | Single value | How many of 16 ATLAS tactics have ≥1 event |
+| Techniques Detected / Blocked | Single value | Techniques with guard blocks |
+| Gap Count | Single value | Catalog techniques with **no** events (grey cells) |
+| MITRE ATLAS Tactic Coverage | Table | Per tactic: expected / observed / detected / coverage % + heat bar |
+| Technique × Tactic Heatmap | Heatmap chart | **0=GAP, 1=OBSERVED, 2=DETECTED** per cell |
+| ATLAS Technique Matrix | Table | Full catalog with **Light Up In Lab** column + **drilldown to Search** |
+| Detection Readiness | Table | Tier-1/Tier-2 field presence in your index (like 8527 setup check, tuned to OTel schema) |
+| Kill-Chain Stage Distribution | Pie chart | Events by `framework.kill_chain_stage` |
+| CVSS Distribution | Column chart | Severity buckets of observed attacks |
+
+Matrix status filter: All / Gaps only / Observed / Detected.
+
+**Light up:** **Deep Workshop** (best) or **FIRE ALL 10** + **RUN ALL 45**.  
+**Catalog scope:** 45 lab-executable techniques × 16 tactics (full official ATLAS is larger; unmapped = GAP).
+
+---
+
+### 9 — Kill-Chain Timeline
+
+**Purpose:** Forensic incident view — dwell time, stage forensics, copy-paste SPL.
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Total Kill-Chain Incidents | Single value | Active chain runs in 24h |
+| Max Stages in Single Incident | Single value | Longest chain depth |
+| Highest CVSS in Any Chain | Single value | Worst-case severity across chains |
+| Agents Compromised Across Chains | Single value | Agent spread in chain attacks |
+| Kill-Chain Incidents Over Time | Column chart | When chains ran |
+| Chain Stages by Kill-Chain Stage Type | Bar chart | Recon / Execution / Exfil distribution |
+| Incident Summary | Table | Per `incident_id`: dwell time, technique chain, agents — **click to drill** |
+| Stage-by-Stage Forensics | Table | Appears after drill: every stage with CVSS, DefenseClaw, detection signal |
+| Correlation SPL box | HTML | Copy-paste hunt for selected incident |
+
+Filters: scenario family (A–E), incident ID.
+
+**Light up:** Any **EXECUTE THREAT CHAIN** (KC-*).  
+**Best for:** Incident-response tabletop exercises.
+
+---
+
+### 10 — NIST AI RMF Scoring
+
+**Purpose:** Multi-framework compliance posture (not just MITRE).
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| OWASP LLM Compliance Score | Single % | Inverse of distinct LLM risks observed (higher = fewer risks seen) |
+| OWASP ASI Compliance Score | Single % | Same for agentic ASI risks |
+| MAESTRO Layer Risk Coverage | Single % | % of 7 CSA MAESTRO layers with risk events |
+| NIST AI RMF Controls at Risk | Single value | Distinct NIST control IDs triggered |
+| NIST AI RMF Function Risk Status | Column chart | GOVERN / MAP / MEASURE / MANAGE event counts |
+| Compliance Score Trend (7d) | Line chart | OWASP LLM score over time |
+| NIST Control Detail | Table | Per control ID: risk status, events, techniques |
+| Agent Behavioral Drift | Table | 7d vs 30d CVSS baseline per agent (drift detection) |
+
+**Light up:** **FIRE ALL 10 SCENARIOS**.  
+**Best for:** Quarterly risk review slides.
+
+---
+
+### 11 — Dataset Export
+
+**Purpose:** Research / ML — is your telemetry rich enough to export?
+
+| Visualization | Type | What it tells you |
+|---------------|------|-------------------|
+| Total Events in Dataset Window | Single value | Volume in selected window (default 30d) |
+| Unique ATLAS Techniques | Single value | Technique diversity for training data |
+| Kill-Chain Incidents Recorded | Single value | Multi-stage examples in dataset |
+| Export Readiness | Single value | Schema completeness score for HuggingFace-style export |
+| Schema field coverage tables | Tables | Which OTel fields are populated (agent, technique, CVSS, etc.) |
+
+**Light up:** **Deep Workshop** + sustained lab use.  
+**Best for:** Building public datasets from lab runs.
+
+---
+
+### Quick reference — Workshop path → dashboards
+
+| Workshop path | Dashboards that should light up |
+|---------------|--------------------------------|
+| **15-Minute First Win** | Overview, Detection Efficacy, Control Attestation |
+| **Standard Workshop** | + Actor Chain Story, Kill-Chain Timeline |
+| **Deep Workshop** | + Technique Coverage, ATLAS Matrix Heatmap |
+| **Fire All 10 Scenarios** | + NIST AI RMF Scoring, Control Attestation (all rows) |
+
+Wait **60 seconds** after each path before refreshing Splunk.
 
 ---
 

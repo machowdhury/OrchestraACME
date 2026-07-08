@@ -1,0 +1,17 @@
+tactic_id,tactic_name,tactic_order,kill_chain_phase,atlas_url
+AML.TA0002,Reconnaissance,1,Pre-attack,https://atlas.mitre.org/tactics/AML.TA0002
+AML.TA0001,Initial Access,2,Attack,https://atlas.mitre.org/tactics/AML.TA0001
+AML.TA0003,Resource Development,3,Attack,https://atlas.mitre.org/tactics/AML.TA0003
+AML.TA0004,ML Attack Staging,4,Attack,https://atlas.mitre.org/tactics/AML.TA0004
+AML.TA0005,Execution,5,Attack,https://atlas.mitre.org/tactics/AML.TA0005
+AML.TA0006,Persistence,6,Attack,https://atlas.mitre.org/tactics/AML.TA0006
+AML.TA0007,Defence Evasion,7,Attack,https://atlas.mitre.org/tactics/AML.TA0007
+AML.TA0008,Discovery,8,Attack,https://atlas.mitre.org/tactics/AML.TA0008
+AML.TA0015,Credential Access,9,Attack,https://atlas.mitre.org/tactics/AML.TA0015
+AML.TA0012,Privilege Escalation,10,Attack,https://atlas.mitre.org/tactics/AML.TA0012
+AML.TA0013,Lateral Movement,11,Attack,https://atlas.mitre.org/tactics/AML.TA0013
+AML.TA0009,Collection,12,Attack,https://atlas.mitre.org/tactics/AML.TA0009
+AML.TA0010,Exfiltration,13,Attack,https://atlas.mitre.org/tactics/AML.TA0010
+AML.TA0014,Command and Control,14,Attack,https://atlas.mitre.org/tactics/AML.TA0014
+AML.TA0011,Impact,15,Attack,https://atlas.mitre.org/tactics/AML.TA0011
+AML.TA0016,Escape to Host,16,Attack,https://atlas.mitre.org/tactics/AML.TA0016

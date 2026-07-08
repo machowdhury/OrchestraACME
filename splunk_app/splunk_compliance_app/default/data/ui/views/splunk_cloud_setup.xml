@@ -15,7 +15,7 @@
           <ol>
             <li>On your OrchestraACME host, build the install package:<br/>
               <code style="background:#1a1a2e;padding:4px 8px;border-radius:4px;">./scripts/package_splunk_app.sh</code></li>
-            <li>Download <code>dist/acme_genai_compliance-2.0.0.tar.gz</code></li>
+            <li>Download <code>dist/acme_genai_compliance-2.3.0.tar.gz</code></li>
             <li>In Splunk Cloud: <strong>Apps → Browse more apps → Upload app</strong> (or ask your Splunk Cloud admin)</li>
             <li>In Splunk Enterprise: <strong>Apps → Manage Apps → Install app from file</strong></li>
           </ol>
@@ -65,16 +65,23 @@ index=acme_agentic_telemetry sourcetype="otel:agentic:json"
 index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20
           </pre>
 
-          <h3 style="color:#ffb74d;">Optional — Machine Learning Toolkit</h3>
-          <p>Install <strong>Splunk Machine Learning Toolkit</strong> from Splunkbase for advanced forecasting panels. Core compliance dashboards work without MLTK.</p>
-
-          <h3 style="color:#ffb74d;">Splunk Cloud Notes</h3>
+          <h3 style="color:#ffb74d;">Splunk Cloud &amp; Enterprise Compatibility</h3>
           <ul>
-            <li>Private apps must be approved by your Splunk Cloud admin.</li>
+            <li><strong>Splunk Cloud:</strong> upload <code>acme_genai_compliance-2.3.0.tar.gz</code> — private apps may require admin approval. See <a href="https://dev.splunk.com/enterprise/docs/releaseapps/cloudvetting/" target="_blank" rel="noopener">Splunk Cloud vetting guide</a>.</li>
+            <li><strong>Splunk Enterprise:</strong> same package — <code>splunk install app … -update 1</code></li>
+            <li>This app uses <strong>pure SPL + CSV lookups</strong> — no <code>bin/</code> scripts, no MLTK required for core dashboards.</li>
             <li>HEC tokens require the <em>hec</em> capability on the token or role.</li>
-            <li>Index creation requires admin privileges on Splunk Cloud.</li>
+            <li>Index creation requires admin privileges.</li>
             <li>This app does <strong>not</strong> require a local Splunk container — only HEC ingest + app install.</li>
           </ul>
+
+          <h3 style="color:#81c784;">Step 6 — Enable Detection Saved Searches (after data flows)</h3>
+          <p>Scheduled alerts ship <strong>disabled</strong> for Cloud-safe install. After ingest works:</p>
+          <ol>
+            <li><strong>Settings → Searches, reports, and alerts</strong></li>
+            <li>Filter owner/app: <code>GenAI Compliance</code></li>
+            <li>Enable searches you want (start with <em>Kill-Chain Detection: Multi-Stage Attack</em>)</li>
+          </ol>
         </div>
         ]]>
       </html>

@@ -135,7 +135,7 @@ incident_id=$incident_filter$ testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$sc
     max(_time) AS chain_end
   BY incident_id
 | eval dwell_seconds=round(chain_end-chain_start,0)
-| eval dwell_str=if(dwell_seconds<60,dwell_seconds."s",round(dwell_seconds/60,1)."m")
+| eval dwell_str=if(dwell_seconds&lt;60,dwell_seconds."s",round(dwell_seconds/60,1)."m")
 | eval max_cvss=round(max_cvss,1)
 | eval severity=case(max_cvss>=9.0,"🔴 CRITICAL",max_cvss>=7.0,"🟠 HIGH",max_cvss>=4.0,"🟡 MEDIUM",1=1,"🟢 LOW")
 | eval technique_chain_str=mvjoin(technique_chain," → ")
