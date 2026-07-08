@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Compliance Scoring — NIST AI RMF</label>
   <description>Daily compliance posture scores across OWASP LLM Top 10, OWASP ASI Agentic Top 10, and NIST AI RMF functions. Universal — works with any otel:agentic:json data source.</description>
 
@@ -112,7 +112,7 @@
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
         <option name="charting.chart.showDataLabels">all</option>
-        <option name="charting.seriesColors">["0xdc4e41","0x00b4ff","0xf8be34"]</option>
+        <option name="charting.seriesColors">["0xdc4e41","0x006d9c","0xf8be34"]</option>
         <option name="charting.axisTitleX.text">NIST AI RMF Function</option>
         <option name="charting.axisTitleY.text">Events / Controls at Risk</option>
         <option name="charting.legend.placement">bottom</option>
@@ -132,7 +132,7 @@
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.drilldown">none</option>
-        <option name="charting.seriesColors">["0x00ff9d"]</option>
+        <option name="charting.seriesColors">["0x53a051"]</option>
         <option name="charting.axisTitleX.text">Date</option>
         <option name="charting.axisTitleY.text">OWASP LLM Score (%)</option>
         <option name="charting.axisY.minimumNumber">0</option>

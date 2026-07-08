@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>MITRE ATLAS Matrix Heatmap</label>
   <description>ATT&amp;CK-style coverage matrix for MITRE ATLAS tactics and techniques. Shows GAP / OBSERVED / DETECTED per cell, tactic coverage %, and drilldown hunts. Run OrchestraACME Workshop → Deep Workshop to populate all lab-executable techniques. Reference: https://atlas.mitre.org/</description>
 
@@ -124,7 +124,7 @@
   <row>
     <panel>
       <chart>
-        <title>Technique × Tactic Heatmap (0=GAP, 1=OBSERVED, 2=DETECTED)</title>
+        <title>Technique × Tactic heatmap — GAP (0), OBSERVED (1), DETECTED (2)</title>
         <search>
           <query>| inputlookup acme_framework_lookup
 | lookup acme_atlas_tactics_lookup tactic_id OUTPUT tactic_order
@@ -144,7 +144,7 @@
         <option name="charting.axisTitleX.text">Technique</option>
         <option name="charting.axisTitleY.text">Tactic</option>
         <option name="charting.legend.placement">top</option>
-        <option name="charting.seriesColors">["0x3a3f4b","0x00b4ff","0xdc4e41"]</option>
+        <option name="charting.seriesColors">["0x5c6773","0x006d9c","0xdc4e41"]</option>
       </chart>
     </panel>
   </row>
@@ -179,7 +179,7 @@
         <option name="wrap">true</option>
         <option name="rowNumbers">true</option>
         <format type="color" field="Status">
-          <colorPalette type="map">{"GAP":#3a3f4b,"OBSERVED":#00b4ff,"DETECTED":#dc4e41}</colorPalette>
+          <colorPalette type="map">{"GAP":#5c6773,"OBSERVED":#006d9c,"DETECTED":#dc4e41}</colorPalette>
         </format>
         <format type="color" field="Severity">
           <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
@@ -214,12 +214,10 @@
     </panel>
     <panel>
       <html>
-        <div style="padding:12px;font-size:13px;line-height:1.6;color:#c8d8e8">
-          <h3 style="color:#00ff9d;margin:0 0 8px 0">How this compares to Splunkbase apps</h3>
-          <p><strong><a href="https://splunkbase.splunk.com/app/5742" target="_blank">ATT&amp;CK Heatmap (5742)</a></strong> — custom viz for Enterprise ATT&amp;CK. This dashboard uses Splunk native heatmap + matrix table for <strong>MITRE ATLAS</strong> with GAP/OBSERVED/DETECTED states tied to OrchestraACME telemetry.</p>
-          <p><strong><a href="https://splunkbase.splunk.com/app/8527" target="_blank">ATLAS AI Threat Detection (8527)</a></strong> — 10 generic SPL rules for production LLM logs. OrchestraACME adds <strong>45 reproducible lab playbooks</strong>, Workshop paths, kill chains, NIST attestation, and hunts that light up after you click attacks.</p>
-          <p><strong>Full ATLAS catalog:</strong> Lab ships <strong>45 executable techniques</strong> across <strong>16 tactics</strong>. Official <a href="https://atlas.mitre.org/" target="_blank">MITRE ATLAS</a> is larger — expand via future STIX sync; gaps show as <code>GAP</code> until fired or enriched.</p>
-        </div>
+        <h3>How this compares to Splunkbase apps</h3>
+        <p><strong><a href="https://splunkbase.splunk.com/app/5742" target="_blank" rel="noopener noreferrer">ATT&amp;CK Heatmap (5742)</a></strong> — custom viz for Enterprise ATT&amp;CK. This dashboard uses Splunk native heatmap + matrix table for <strong>MITRE ATLAS</strong> with labeled GAP / OBSERVED / DETECTED states tied to OrchestraACME telemetry.</p>
+        <p><strong><a href="https://splunkbase.splunk.com/app/8527" target="_blank" rel="noopener noreferrer">ATLAS AI Threat Detection (8527)</a></strong> — 10 generic SPL rules for production LLM logs. OrchestraACME adds <strong>45 reproducible lab playbooks</strong>, Workshop paths, kill chains, NIST attestation, and hunts that light up after you click attacks.</p>
+        <p><strong>Full ATLAS catalog:</strong> Lab ships <strong>45 executable techniques</strong> across <strong>16 tactics</strong>. Official <a href="https://atlas.mitre.org/" target="_blank" rel="noopener noreferrer">MITRE ATLAS</a> is larger — expand via future STIX sync; gaps show as <code>GAP</code> until fired or enriched.</p>
       </html>
     </panel>
   </row>

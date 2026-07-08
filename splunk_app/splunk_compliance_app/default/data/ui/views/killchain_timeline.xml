@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Kill-Chain Incident Timeline</label>
   <description>Multi-stage attack correlation view. Each incident_id groups a complete kill-chain execution. Drill into any incident for full stage-by-stage forensics.</description>
 
@@ -92,7 +92,7 @@ incident_id=* testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$scenario_family$
         </search>
         <option name="charting.chart">column</option>
         <option name="charting.drilldown">none</option>
-        <option name="charting.seriesColors">["0x00ff9d"]</option>
+        <option name="charting.seriesColors">["0x53a051"]</option>
         <option name="charting.axisTitleX.text">Time</option>
         <option name="charting.axisTitleY.text">Incidents</option>
       </chart>
@@ -109,7 +109,7 @@ incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
         <option name="charting.chart">bar</option>
         <option name="charting.drilldown">none</option>
         <option name="charting.chart.showDataLabels">all</option>
-        <option name="charting.seriesColors">["0xf06595"]</option>
+        <option name="charting.seriesColors">["0xf1813f"]</option>
         <option name="charting.axisTitleX.text">Stage Count</option>
       </chart>
     </panel>
@@ -188,7 +188,7 @@ incident_id=$incident_filter$ testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$sc
           <colorPalette type="map">{"Critical":#dc4e41,"High":#f1813f,"Medium":#f8be34,"Low":#53a051}</colorPalette>
         </format>
         <format type="color" field="DefenseClaw">
-          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#00b4ff}</colorPalette>
+          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#006d9c}</colorPalette>
         </format>
       </table>
     </panel>
@@ -197,17 +197,11 @@ incident_id=$incident_filter$ testbed_mode=KILL_CHAIN_ACTIVE scenario_family=$sc
   <row depends="$selected_incident$">
     <panel>
       <html>
-        <![CDATA[
-        <div style="background:#0b1120;border:1px solid #1e2a4a;border-radius:8px;padding:16px;font-family:'Share Tech Mono',monospace">
-          <div style="color:#7986cb;font-size:.75rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">// Splunk Correlation Search for this Incident</div>
-          <div style="background:#020810;padding:14px;border-radius:5px;font-size:.8rem;color:#00ff9d;word-break:break-all">
-            sourcetype="otel:agentic:json" incident_id="$selected_incident$"<br>
-            | table _time stage_num stage_name framework.technique_id framework.severity defenseclaw_action agent.id<br>
-            | sort stage_num
-          </div>
-          <div style="color:#546e7a;font-size:.7rem;margin-top:10px">Copy this SPL into Splunk Search to replay the full incident timeline</div>
-        </div>
-        ]]>
+        <h3>Splunk correlation search for this incident</h3>
+        <p>Copy this SPL into Search to replay the full incident timeline:</p>
+        <pre><code>sourcetype="otel:agentic:json" incident_id="$selected_incident$"
+| table _time stage_num stage_name framework.technique_id framework.severity defenseclaw_action agent.id
+| sort stage_num</code></pre>
       </html>
     </panel>
   </row>

@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>GenAI Compliance Overview</label>
   <description>Universal GenAI and Agentic AI compliance posture dashboard. Works with any otel:agentic:json sourcetype data.</description>
 
@@ -116,7 +116,7 @@
         <option name="charting.chart.showDataLabels">all</option>
         <option name="charting.axisTitleX.text">Event Count</option>
         <option name="charting.axisTitleY.text">Tactic</option>
-        <option name="charting.seriesColors">["0x00b4ff"]</option>
+        <option name="charting.seriesColors">["0x006d9c"]</option>
       </chart>
     </panel>
   </row>
@@ -210,7 +210,7 @@
         <option name="drilldown">none</option>
         <option name="wrap">false</option>
         <format type="color" field="Action">
-          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#00b4ff,"ALERT_RAISED":#7986cb}</colorPalette>
+          <colorPalette type="map">{"HARD_DENY":#dc4e41,"QUARANTINE":#f1813f,"RATE_LIMIT":#f8be34,"ALERT":#006d9c,"ALERT_RAISED":#006d9c}</colorPalette>
         </format>
       </table>
     </panel>

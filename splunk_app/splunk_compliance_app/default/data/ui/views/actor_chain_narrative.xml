@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Threat Actor Chain Narrative</label>
   <description>Rogue-actor storyline view: expected chain stages vs observed events, agent handoffs, and per-stage risk statements.</description>
 
@@ -55,7 +55,7 @@
   <row>
     <panel>
       <html>
-        <h3 style="color:#90caf9">How to read this view</h3>
+        <h3>How to read this view</h3>
         <p>Each incident_id is one rogue-actor campaign. Stages should align with <code>acme_kill_chain_stages_lookup</code>. Gaps between expected and observed stages indicate detection or emulation gaps worth teaching in workshops.</p>
         <p>SPL: <code>`acme_genai_index` incident_id="&lt;ID&gt;" | sort stage_num</code></p>
       </html>

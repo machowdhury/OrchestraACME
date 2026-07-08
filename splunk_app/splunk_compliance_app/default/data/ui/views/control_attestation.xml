@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Control Attestation</label>
   <description>Measurable NIST AI RMF control evidence — pass/fail per campaign week and workflow surface.</description>
 

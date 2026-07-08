@@ -19,7 +19,7 @@ Official reference: [Vet apps for Splunk Cloud Platform](https://dev.splunk.com/
 | No KV store without collections | Unused KV transform removed |
 | No MLTK dependency | Core dashboards work without Machine Learning Toolkit |
 | No `_internal` access | All searches use customer index via macro |
-| Package structure | Tarball root folder = `acme_genai_compliance` = `[package] id` |
+| **Design / a11y** | Splunk UI severity palette; no forced `theme="dark"`; Color+ text labels — see `DESIGN_SYSTEM.md` |
 
 ---
 
@@ -33,7 +33,7 @@ chmod +x scripts/validate_splunk_app.sh scripts/package_splunk_app.sh
 ./scripts/package_splunk_app.sh
 ```
 
-Output: `dist/acme_genai_compliance-2.3.0.tar.gz`
+Output: `dist/acme_genai_compliance-2.3.1.tar.gz`
 
 ---
 
@@ -52,7 +52,7 @@ Output: `dist/acme_genai_compliance-2.3.0.tar.gz`
 ## Splunk Enterprise install
 
 ```bash
-$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.3.0.tar.gz -update 1
+$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.3.1.tar.gz -update 1
 $SPLUNK_HOME/bin/splunk restart
 ```
 
@@ -66,7 +66,7 @@ Splunk Cloud private apps should pass **AppInspect** with the `cloud` tag:
 
 ```bash
 # Requires Splunk AppInspect CLI from Splunk Developer tools
-appinspect inspect dist/acme_genai_compliance-2.3.0.tar.gz --mode test --included-tags cloud
+appinspect inspect dist/acme_genai_compliance-2.3.1.tar.gz --mode test --included-tags cloud
 ```
 
 If you do not have AppInspect locally, upload to a Splunk Cloud **test stack** first and review **Manage Apps → App inspection**.

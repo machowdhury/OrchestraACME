@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Threat Hunting Workbench</label>
   <description>Practitioner threat-hunting panel with per-technique SPL templates, hunt steps, and rogue-actor narratives from the lab playbooks.</description>
 

@@ -82,6 +82,27 @@ APP_VER="$(grep '^version' "${APP_DIR}/default/app.conf" | awk -F= '{print $2}' 
 PKG_VER="$(grep '^VERSION=' "${ROOT_DIR}/scripts/package_splunk_app.sh" | head -1 | cut -d'"' -f2)"
 [[ "${APP_VER}" == "${PKG_VER}" ]] && pass "version ${APP_VER} matches package script" || fail "version mismatch app.conf=${APP_VER} package=${PKG_VER}"
 
+# 11. Splunk UI Design System — color & theme (https://splunkui.splunk.com/DesignSystem/Accessibility/Color)
+VIEWS_DIR="${APP_DIR}/default/data/ui/views"
+if grep -rq 'theme="dark"' "${VIEWS_DIR}" 2>/dev/null; then
+  fail 'forced theme="dark" on dashboard — omit theme to use Splunk UI tokens'
+else
+  pass "dashboards use Splunk UI theme (no forced dark)"
+fi
+
+BANNED_COLORS='00ff9d|00b4ff|7986cb|546e7a|4fc3f7|81c784|90caf9|0b1120|ffb74d'
+if grep -rEi "${BANNED_COLORS}" "${VIEWS_DIR}" 2>/dev/null | grep -q .; then
+  fail "non-Splunk palette hex found in dashboards (see splunk_app/DESIGN_SYSTEM.md)"
+else
+  pass "no banned custom palette colors in dashboards"
+fi
+
+if grep -rE 'style="[^"]*(color|background):#' "${VIEWS_DIR}" 2>/dev/null | grep -q .; then
+  fail "inline HTML color/background styles — use Splunk theme inheritance"
+else
+  pass "HTML panels avoid inline color/background styles"
+fi
+
 echo ""
 if [[ "${ERRORS}" -gt 0 ]]; then
   echo "=== ${ERRORS} validation error(s) ==="

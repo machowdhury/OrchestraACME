@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.1">
   <label>Dataset Export — HuggingFace Readiness</label>
   <description>Monitor dataset volume, schema completeness, and export readiness for HuggingFace-compatible JSONL export matching the emmanuelgjr/genai-incidents schema.</description>
 
@@ -86,7 +86,7 @@ incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
         <option name="charting.chart.stackMode">stacked</option>
         <option name="charting.drilldown">none</option>
         <option name="charting.legend.placement">bottom</option>
-        <option name="charting.seriesColors">["0x00b4ff","0x00ff9d","0xf06595"]</option>
+        <option name="charting.seriesColors">["0x006d9c","0x53a051","0xf1813f"]</option>
         <option name="charting.axisTitleX.text">Date</option>
         <option name="charting.axisTitleY.text">Events</option>
       </chart>
@@ -122,7 +122,7 @@ incident_id=* testbed_mode=KILL_CHAIN_ACTIVE
         <option name="charting.chart">bar</option>
         <option name="charting.drilldown">none</option>
         <option name="charting.chart.showDataLabels">all</option>
-        <option name="charting.seriesColors">["0x00ff9d"]</option>
+        <option name="charting.seriesColors">["0x53a051"]</option>
         <option name="charting.axisTitleX.text">Completeness (%)</option>
         <option name="charting.axisX.minimumNumber">0</option>
         <option name="charting.axisX.maximumNumber">100</option>
@@ -155,44 +155,17 @@ framework.severity=*
     </panel>
     <panel>
       <html>
-        <![CDATA[
-        <div style="background:#0b1120;border:1px solid #1e2a4a;border-radius:8px;padding:20px;font-family:monospace">
-          <div style="color:#7986cb;font-size:.75rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px">// HuggingFace Export — Banking App API</div>
-
-          <div style="margin-bottom:14px">
-            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export Synthetic Dataset (69 records from taxonomy)</div>
-            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
-              POST http://localhost:5000/api/v1/dataset/export/synthetic
-            </div>
-          </div>
-
-          <div style="margin-bottom:14px">
-            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export Splunk Lookup CSV</div>
-            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
-              POST http://localhost:5000/api/v1/dataset/export/lookup-csv
-            </div>
-          </div>
-
-          <div style="margin-bottom:14px">
-            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Export HuggingFace Dataset Card</div>
-            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00ff9d">
-              POST http://localhost:5000/api/v1/dataset/export/dataset-card
-            </div>
-          </div>
-
-          <div>
-            <div style="color:#546e7a;font-size:.7rem;margin-bottom:6px">Dataset Schema (HF-compatible fields)</div>
-            <div style="background:#020810;padding:10px;border-radius:4px;font-size:.72rem;color:#00b4ff">
-              GET http://localhost:5000/api/v1/dataset/schema
-            </div>
-          </div>
-
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #1e2a4a">
-            <div style="color:#546e7a;font-size:.68rem">Compatible with: emmanuelgjr/genai-incidents schema v2026.05</div>
-            <div style="color:#546e7a;font-size:.68rem">Output: /var/log/defenseclaw/acme_synthetic_dataset.jsonl</div>
-          </div>
-        </div>
-        ]]>
+        <h3>HuggingFace export — Banking App API</h3>
+        <p><strong>Export synthetic dataset</strong> (69 records from taxonomy)</p>
+        <pre><code>POST http://localhost:5000/api/v1/dataset/export/synthetic</code></pre>
+        <p><strong>Export Splunk lookup CSV</strong></p>
+        <pre><code>POST http://localhost:5000/api/v1/dataset/export/lookup-csv</code></pre>
+        <p><strong>Export HuggingFace dataset card</strong></p>
+        <pre><code>POST http://localhost:5000/api/v1/dataset/export/dataset-card</code></pre>
+        <p><strong>Dataset schema</strong> (HF-compatible fields)</p>
+        <pre><code>GET http://localhost:5000/api/v1/dataset/schema</code></pre>
+        <p>Compatible with: emmanuelgjr/genai-incidents schema v2026.05<br/>
+        Output: /var/log/defenseclaw/acme_synthetic_dataset.jsonl</p>
       </html>
     </panel>
   </row>

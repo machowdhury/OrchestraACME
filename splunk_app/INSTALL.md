@@ -22,7 +22,7 @@ chmod +x scripts/validate_splunk_app.sh scripts/package_splunk_app.sh
 This creates:
 
 ```
-dist/acme_genai_compliance-2.3.0.tar.gz
+dist/acme_genai_compliance-2.3.1.tar.gz
 ```
 
 The tarball uses the correct Splunk app folder name (`acme_genai_compliance`) required for Cloud and Enterprise installation.
@@ -41,12 +41,12 @@ The tarball uses the correct Splunk app folder name (`acme_genai_compliance`) re
 
 1. Log in to your Splunk Cloud instance
 2. Navigate to **Apps → Browse more apps → Upload app**
-3. Upload `dist/acme_genai_compliance-2.3.0.tar.gz`
+3. Upload `dist/acme_genai_compliance-2.3.1.tar.gz`
 4. If prompted, request **private app approval** from your Splunk Cloud administrator
 
 > **Alternative (admin CLI on SHC):**
 > ```bash
-> splunk install app acme_genai_compliance-2.3.0.tar.gz -update 1 -auth admin:<password>
+> splunk install app acme_genai_compliance-2.3.1.tar.gz -update 1 -auth admin:<password>
 > ```
 
 ### Step B — Create Index
@@ -118,7 +118,7 @@ SPLUNK_HEC_ENDPOINT=https://<your-splunk-host>:8088/services/collector/event
 Install the app via UI or CLI:
 
 ```bash
-$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.3.0.tar.gz -update 1
+$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.3.1.tar.gz -update 1
 $SPLUNK_HOME/bin/splunk restart
 ```
 
@@ -133,9 +133,9 @@ When using the bundled Splunk container:
 ./scripts/package_splunk_app.sh
 
 # Install into running container
-docker cp dist/acme_genai_compliance-2.3.0.tar.gz acme_splunk:/tmp/
+docker cp dist/acme_genai_compliance-2.3.1.tar.gz acme_splunk:/tmp/
 docker compose exec splunk /opt/splunk/bin/splunk install app \
-  /tmp/acme_genai_compliance-2.3.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+  /tmp/acme_genai_compliance-2.3.1.tar.gz -update 1 -auth admin:ACMEPassword2026!
 docker compose exec splunk /opt/splunk/bin/splunk restart
 ```
 
@@ -188,7 +188,7 @@ See **[splunk_app/CLOUD_VETTING.md](CLOUD_VETTING.md)** for the full checklist a
 
 ```bash
 ./scripts/validate_splunk_app.sh   # pre-upload checks
-./scripts/package_splunk_app.sh    # build dist/acme_genai_compliance-2.3.0.tar.gz
+./scripts/package_splunk_app.sh    # build dist/acme_genai_compliance-2.3.1.tar.gz
 ```
 
 **Key points:**
@@ -196,6 +196,7 @@ See **[splunk_app/CLOUD_VETTING.md](CLOUD_VETTING.md)** for the full checklist a
 - No `bin/` scripts — SPL dashboards and CSV lookups only
 - Scheduled detection searches ship **disabled**; enable after macro + HEC are configured
 - No MLTK required for core dashboards
+- Colors follow the [Splunk UI Design System](https://splunkui.splunk.com/DesignSystem/Accessibility/Color) — see [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)
 
 ---
 
