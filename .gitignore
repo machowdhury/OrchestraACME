@@ -31,3 +31,6 @@ secrets/
 *.pem
 *.key
 credentials.json
+
+# Author-only blog / campaign docs (never publish)
+docs/private/

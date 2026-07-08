@@ -18,8 +18,8 @@
 
 Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
 
-**Hands-on guide:** [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) — how to fire campaign weeks and generate Splunk evidence for blog posts.  
-**Threat library:** [docs/EMERGING_THREATS.md](docs/EMERGING_THREATS.md) — eight emerging attack classes (2025–2026).
+**User guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — exploits, threat hunts, Splunk dashboards.  
+**Threat surfaces:** [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) — eight agentic attack surfaces (2025–2026).
 
 **Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — open an issue.
 
@@ -33,11 +33,11 @@ OrchestraACME targets **workflow-realistic** agentic security validation, not pr
 |--------------|-----------------|
 | Attacks are mostly strings sent to one agent | Attacks exploit **tools, RAG, memory, A2A, orchestration** surfaces |
 | Defense is regex middleware | Defense is **enforced in code paths** (MCP gateway, memory policy, A2A verifier, orchestration guard) + regex output inspection |
-| Framework mapping is lookup enrichment | Framework mapping is **measurable control evidence** (NIST pass/fail per campaign week) |
+| Framework mapping is lookup enrichment | Framework mapping is **measurable control evidence** (NIST pass/fail per scenario) |
 | Splunk shows events | Splunk proves **detection efficacy** (coverage %, MTTD, chain completeness, control attestation) |
 | 45 techniques = catalog completeness | 45 techniques = **curated emerging threat library** with reproducible kill chains |
 
-**Eight emerging attack classes** (2025–2026) each have a campaign week, workflow surface, and Splunk macro — see [docs/EMERGING_THREATS.md](docs/EMERGING_THREATS.md).
+**Eight agentic threat surfaces** (2025–2026) map to Top 10 lab scenarios — see [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md).
 
 | Layer | Module |
 |-------|--------|
@@ -268,7 +268,7 @@ Use this lab to:
 
 - Execute a **4-agent loan processing chain** with live LLM reasoning
 - Launch **ten campaign-week adversarial scenarios** across real workflow surfaces (tools, RAG, A2A, memory, orchestration)
-- Enforce **layered runtime controls** — see [USAGE_GUIDE](docs/USAGE_GUIDE.md)
+- Enforce **layered runtime controls** — see [USER_GUIDE](docs/USER_GUIDE.md)
 - Validate **Splunk ES detection rules** against `otel:agentic:json` telemetry
 
 > **First boot:** LLM works after Ollama pulls the model. Splunk dashboards work only after you install the compliance app and create the index — not automatically on `docker compose up`.
@@ -531,7 +531,7 @@ Ten **campaign-week** scenarios (W1–W10) in the attack panel, each targeting a
 | W9 | The Invisible Leak | RAG exfil | `galileo_observe` |
 | W10 | Self-Healing SOC | Memory + rogue agent | `memory_policy` + SOAR |
 
-Full step-by-step: **[docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md)**.
+Full step-by-step: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.
 
 ### 4. Splunk Compliance Apps
 
@@ -662,7 +662,7 @@ If the last two steps fail, see [HEC Token Alignment](#hec-token-alignment) and 
 
 ## Usage Guide
 
-> **Detailed guide:** [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md) — campaign weeks, Splunk macros, blog demo scripts.
+> **Detailed guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — scenarios, Splunk macros, troubleshooting.
 
 ### A. Run a Legitimate Banking Transaction
 
