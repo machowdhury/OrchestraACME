@@ -18,7 +18,7 @@
 
 Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
 
-**Workshop curriculum:** [docs/WORKSHOP.md](docs/WORKSHOP.md) — ordered levels 0–5, role tracks, BOTS-style hunt questions.  
+**Workshop curriculum:** [docs/WORKSHOP.md](docs/WORKSHOP.md) — ordered levels 0–5, role tracks, why teams run it, skills for daily work, BOTS-style hunt questions.  
 **User guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — Splunk dashboards and field reference.  
 **Threat surfaces:** [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) — eight agentic attack surfaces (2025–2026).
 
@@ -405,12 +405,16 @@ This is **not** a direct Splunk SDK integration inside the Python apps. Telemetr
 
 ### Network Ports
 
-| Port | Service | Access |
-|------|---------|--------|
-| 5000 | Banking App | http://localhost:5000 |
-| 5001 | Attack Panel | http://localhost:5001 |
-| 8000 | Splunk Web UI | http://localhost:8000 |
-| 8088 | Splunk HEC | Internal / localhost |
+| Port | Service | Local access | Cloud VM |
+|------|---------|--------------|----------|
+| 5000 | Banking App | http://localhost:5000 | Restrict inbound — learners only |
+| 5001 | Attack Panel | http://localhost:5001 | Restrict inbound — learners only |
+| 8000 | Splunk Web UI | http://localhost:8000 | Restrict inbound — **never `0.0.0.0/0`** |
+| 8088 | Splunk HEC | Internal / Docker network | **Do not expose publicly** |
+| 11434 | Ollama | Internal (published on host) | **Do not expose publicly** |
+| 4317–4318 | OTel Collector | Debug / internal | **Do not expose publicly** |
+
+**AWS EC2 / Azure VM / Google Compute Engine:** Full security group, NSG, and firewall examples — [docs/CLOUD_VM_DEPLOYMENT.md](docs/CLOUD_VM_DEPLOYMENT.md).
 
 ### Splunk App Prerequisites (for full dashboard)
 
@@ -601,6 +605,20 @@ First startup takes **5–15 minutes** because:
 
 - Ollama pulls the `llama3.2:1b` model (~1.3 GB)
 - Splunk initializes and accepts the license
+
+### Step 2b — Cloud VM (optional)
+
+Deploy on **AWS EC2**, **Azure VM**, or **Google Compute Engine** instead of localhost:
+
+1. Open inbound **5000**, **5001**, and (if local Splunk) **8000** only to your VPN or learner IP range  
+2. Keep **8088**, **11434**, and OTel ports **private**  
+3. Prefer **Splunk Cloud + external compose** to avoid exposing Splunk on the lab VM  
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d
+```
+
+**Full port and firewall guide:** [docs/CLOUD_VM_DEPLOYMENT.md](docs/CLOUD_VM_DEPLOYMENT.md)
 
 ### Step 3 — Monitor startup progress
 

@@ -8,7 +8,208 @@
 | Splunk (run hunts) | http://localhost:8000 → **Search** or app dashboards |
 | Banking app | http://localhost:5000 |
 
-**Companion docs:** [USER_GUIDE.md](USER_GUIDE.md) (dashboards) · [THREAT_SURFACES.md](THREAT_SURFACES.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md)
+**Companion docs:** [USER_GUIDE.md](USER_GUIDE.md) (dashboards) · [THREAT_SURFACES.md](THREAT_SURFACES.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) (AWS / Azure / GCP ports)
+
+---
+
+## About the OrchestraACME Workshop
+
+### What it is
+
+The **OrchestraACME Workshop** is a hands-on security lab curriculum — not a slide deck. Learners operate a realistic **multi-agent loan-processing application** under attack, observe how **runtime controls** behave (block, allow, detect-only), and prove outcomes in **Splunk** using the same workflows they use in production SOC and detection engineering.
+
+Two tools work together:
+
+| Tool | Role in the workshop |
+|------|----------------------|
+| **Attack Panel** (`:5001`) | Fires ordered, reproducible adversarial scenarios and kill chains — one click runs a full learning path |
+| **Splunk** (`:8000`) | Answers hunt questions, validates blocks and alerts, produces coverage and compliance evidence |
+
+Every attack sends **real HTTP traffic** through **live Ollama inference**. Telemetry uses **OpenTelemetry GenAI semantic conventions** (`gen_ai.*`, `workflow.*`, `framework.*`) and lands in Splunk as `otel:agentic:json`. Outcomes are genuinely non-deterministic: some runs **BLOCK**, others **INJECT** — which is intentional. Production agent security is not binary.
+
+The curriculum is **ordered** (Levels 0–5), **role-aware** (analyst through GRC), and includes **BOTS-style hunt questions** (Q101–Q503) — the same pedagogy as [Splunk BOTS](https://github.com/splunk/botsv3), applied to agentic AI telemetry.
+
+---
+
+### Why organizations run this workshop
+
+Most agentic-AI security training fails in predictable ways:
+
+| Failure mode | What goes wrong | How this workshop fixes it |
+|--------------|-----------------|---------------------------|
+| **Theory without telemetry** | Teams discuss MCP and RAG risks but never see `workflow.block_reason` in a SIEM | Every path emits searchable OTel fields you can hunt the same day |
+| **Prompt demos without surfaces** | Red teams test injection strings on a chatbot, not tool gateways or A2A trust chains | Ten scenarios map to **workflow surfaces** — tools, RAG, memory, A2A, orchestration, supply chain |
+| **Controls without evidence** | “We use guardrails” with no pass/fail per control or scenario | **Control Attestation** and NIST panels show PASS/FAIL tied to `campaign_week` |
+| **Detection without coverage math** | Ad hoc Splunk searches with no sense of MITRE breadth | **Technique Coverage Matrix** shows OBSERVED vs NOT_OBSERVED across 45 techniques |
+| **Architecture without validation** | Threat models sit in documents; nobody checks if telemetry would catch predicted failures | Optional **MAESTRO** path: model → attack → prove layer coverage in Splunk |
+| **Splunk training on synthetic logs** | Analysts learn SPL on stale canned data unrelated to GenAI | Hunts use **your lab’s live index** after **your** attacks — field names match emerging GenAI conventions |
+
+**Who typically sponsors a workshop:**
+
+- **Security leadership** — demonstrate measurable agentic risk program, not AI buzzwords
+- **SOC / detection teams** — build hunts before production agents ship
+- **Platform / AppSec** — validate where to place controls (pre-LLM vs post-LLM vs detect-only)
+- **GRC / risk** — produce framework-aligned evidence (OWASP LLM, NIST AI RMF, MAESTRO layers)
+- **Splunk practitioners** — practice GenAI telemetry, MLTK anomaly patterns, and compliance dashboards on realistic data
+
+---
+
+### What participants walk away with
+
+Concrete **deliverables**, not just awareness:
+
+| Deliverable | Where it lives after the workshop |
+|-------------|-----------------------------------|
+| **Working hunt SPL** | Q201–Q503 queries in this doc; macros `` `acme_campaign_w6` `` … `` `w10` ``; Threat Hunting playbooks |
+| **Dashboard literacy** | Twelve Splunk views — Overview, Detection Efficacy, Control Attestation, Technique Coverage, Actor Chain Story, NIST AI RMF, etc. |
+| **Reproducible attack scenarios** | Top 10 scenarios + 5 kill chains + 45-technique registry — re-run anytime for regression or demos |
+| **Control placement vocabulary** | Pre-LLM workflow block vs post-LLM output deny vs detect-only — defensible in architecture reviews |
+| **Coverage baseline** | Screenshot or export of technique OBSERVED % and NOT_OBSERVED backlog |
+| **Compliance narrative** | NIST control pass/fail per scenario; MAESTRO layer coverage % |
+| **Honest gap analysis** | Terminal `INJECTED` outcomes — where models complied despite controls; fuels detection backlog |
+| **Optional Cisco / MLTK path** | AIBOM + MCP scan telemetry, CTSM token anomaly patterns (when overlay enabled) |
+
+Participants leave with artifacts they can **paste into Confluence**, **attach to audit responses**, or **adapt into production detection rules** — because field names and patterns mirror what enterprises are standardizing on for GenAI observability.
+
+---
+
+### Skills you will use in daily work
+
+Skills are mapped by role. You do not need every level; follow the [role quick-start](#role-quick-start-pick-one-row) row that matches your job.
+
+#### Junior SOC analyst
+
+**Daily work context:** Triage alerts, initial investigation, escalate with context.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| Confirm GenAI telemetry ingest | Level 0–1 | “Are we actually logging agent calls?” — first question on any AI incident |
+| Hunt by `campaign_week` / scenario | Level 1–2 | Map alerts to **which agent surface** failed (tools vs output vs retrieval) |
+| Read `workflow.blocked` and `workflow.block_reason` | Level 1, Q204 | Triage pre-LLM blocks vs model-reached events |
+| Read `defenseclaw.action` / `codeguard_blocked` | Level 1, Q102 | Distinguish output-side denials from input validation |
+| Field discovery on unfamiliar sourcetypes | Level 2, Q201–Q203 | Same muscle memory as BOTS — explore before you filter |
+| Use macros and time bounds | All levels | Production hunts: `` `acme_genai_index` `` pattern translates to your org’s index macro |
+
+**Outcome:** You can open a GenAI security event, name the **control layer** that fired, and write a basic SPL triage query without waiting for a senior analyst.
+
+---
+
+#### Senior SOC analyst / incident responder
+
+**Daily work context:** Correlate multi-stage attacks, build timelines, brief leadership.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| Correlate by `incident_id` | Level 3, Q301–Q303 | Agent compromises span stages — same skill as chaining ES notable events |
+| Kill-chain storytelling | Level 3, Actor Chain Story | Executive briefings: “intake → extraction → risk → compliance” |
+| Interpret `kill_chain.stage` | Level 3 | Place agent events on an intrusion timeline |
+| Distinguish single-surface vs chained abuse | Level 1 vs 3 | Prioritize response: one bad tool call vs orchestrated fraud pipeline |
+| Hunt A2A / RAG / memory indicators | Level 2, Q207–Q209 | Emerging agentic IOCs: `cryptographic_passport_valid`, `vector_retrieval_count`, `containment.action` |
+
+**Outcome:** You can run an **end-to-end agentic incident narrative** in Splunk and explain which agents and surfaces were involved across time.
+
+---
+
+#### Detection engineer
+
+**Daily work context:** Write rules, measure coverage, reduce false positives, prioritize purple-team backlog.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| Measure technique OBSERVED % | Level 4, Q401 | Defensible “MITRE ATLAS coverage for agents” metric in roadmap decks |
+| Maintain NOT_OBSERVED backlog | Level 4, Q402 | Purple-team prioritization from evidence, not guesswork |
+| Design pre-LLM vs post-LLM detections | Level 1 | Rule placement: gateway block SPL ≠ output inspection SPL |
+| Token / cost anomaly patterns | Level 2 Q206, Level 4B | DoS and “infinity bill” class detections on `gen_ai.usage.*` |
+| MLTK + CTSM forecasting (optional) | Level 4B, Cisco path | Behavioral baselines when point thresholds fail on bursty GenAI traffic |
+| Adapt playbook SPL from lab to prod | Threat Hunting dashboard | Copy pattern, swap index/sourcetype, keep field logic |
+| Foundation-Sec-8B hunt enrichment (optional) | MLTK dashboard | LLM-assisted triage narrative on technique context |
+
+**Outcome:** You can publish a **coverage report**, propose **three detection layers** for an agent architecture, and hand SOC **ready-to-run SPL** with documented expected fields.
+
+---
+
+#### Security engineer / platform engineer
+
+**Daily work context:** Implement gateways, guardrails, OTel instrumentation, CI/CD security gates.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| Map controls to code paths | Level 1 + THREAT_SURFACES | Know *where* MCP gateway, A2A verifier, memory policy sit relative to LLM calls |
+| Evaluate LAB_MODE teach vs enforce | Cisco path | Roll out scanners without breaking dev workflows — pattern for gradual enforcement |
+| Instrument `gen_ai.*` and security extensions | Level 0 | OTel GenAI conventions for your own agents |
+| Test control regression | Re-run First Win after changes | “Did we break the MCP block?” — mini regression suite |
+| Full pipeline vs single-agent blast radius | Top 10 → Full Pipeline | One payload across four agents — how delegation amplifies impact |
+
+**Outcome:** You can **place and test controls** with Splunk proof, and speak the same language as SOC about `workflow.*` and `framework.*` fields.
+
+---
+
+#### Security architect
+
+**Daily work context:** Threat model agent systems, design trust boundaries, review vendor claims.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| CSA MAESTRO 7-layer thinking | Level 5A | Structure agentic threat models (L1 foundation → L7 ecosystem) |
+| Predict → attack → prove loop | MAESTRO Validate | Close the gap between design docs and observable telemetry |
+| Map surfaces to OWASP LLM / ASI / NIST | Level 5, THREAT_SURFACES | Framework crosswalk in architecture decks |
+| Reason about non-determinism and autonomy | All levels | Design detections that survive model variance |
+| Multi-agent trust propagation | Level 3 + Scenario 8 | A2A identity, delegation chains, session binding |
+
+**Outcome:** You can deliver a **threat model with validation evidence** — not just a diagram — and prioritize controls by MAESTRO layer and observed Splunk coverage.
+
+---
+
+#### Compliance / GRC / risk
+
+**Daily work context:** Control assessments, audit evidence, AI governance programs.
+
+| Skill | Workshop level | On-the-job use |
+|-------|----------------|----------------|
+| NIST AI RMF posture from live events | Level 5B, Q502–Q503 | Move from policy PDFs to `control.status` per scenario |
+| OWASP LLM risk categories observed | Level 5B | “Which LLM Top 10 categories generated telemetry this quarter?” |
+| MAESTRO layer risk coverage % | Level 5A, Q501 | Agentic-specific coverage metric for risk committees |
+| Scenario-to-control traceability | Fire All 10 + Control Attestation | `campaign_week=1..10` maps to attestation rows |
+| Explain detect-only vs block | Level 1, Scenario 9 | Defensible risk acceptance: monitor retrieval exfil without blocking every query |
+
+**Outcome:** You can **show auditors Splunk evidence** tied to named scenarios and frameworks — and explain *why* a detect-only control is intentional.
+
+---
+
+#### Workshop facilitator
+
+**Daily work context:** Run brown-bags, customer workshops, internal enablement.
+
+| Skill | Resource | On-the-job use |
+|-------|----------|----------------|
+| 90-minute scripted session | [Facilitator runbook](#facilitator-runbook-90-minute-session) | Repeatable delivery without rewriting content |
+| Role-based pacing | [Role quick-start](#role-quick-start-pick-one-row) | Right depth for mixed audiences |
+| BOTS-style progressive hunts | Q201–Q210 | Keeps room engaged in Splunk Search |
+| Benign + malicious traffic contrast | Level 0 tip | Overview dashboard shows normal vs attack traffic |
+
+---
+
+### What makes this different from “AI security awareness” training
+
+| Typical awareness session | OrchestraACME Workshop |
+|---------------------------|------------------------|
+| Slides on prompt injection | Live injection against Ollama with logged outcome |
+| Generic “monitor your LLM” | Specific fields: `workflow.block_reason`, `technique_id`, `framework.maestro_layers` |
+| One demo video | 45 techniques + 5 kill chains you re-run locally |
+| Quiz on OWASP LLM Top 10 | Splunk panel showing which categories **fired** in your environment |
+| Architecture diagram only | Optional MAESTRO + Splunk **prove** loop |
+
+---
+
+### Time investment
+
+| Depth | Levels | Typical time | Best for |
+|-------|--------|--------------|----------|
+| **Taster** | 0 + 1 | ~35 min | Executives, kickoff, “is the lab alive?” |
+| **SOC foundation** | 0–2 | ~2 hours | Junior–mid analysts |
+| **SOC advanced** | 0–3 | ~3 hours | Senior analysts, IR |
+| **Detection engineering** | 0–4 | ~4 hours | Detection engineers, purple team |
+| **Full program** | 0–5 | ~6–8 hours | Architects, GRC, multi-day enablement |
 
 ---
 
@@ -35,22 +236,307 @@ Level 5  Architecture & GRC    (architect + compliance, ~90 min)
 
 ## Level 0 — Environment (everyone)
 
-**Goal:** Prove Docker, LLM, and Splunk ingest work before teaching anything else.
+**Time:** about 20–45 minutes the first time (longer while Ollama downloads the AI model).  
+**Goal:** Make sure all three parts of the lab can talk to each other — the **banking app**, the **attack panel**, and **Splunk** — before you run any workshop scenarios.
 
-| Step | Action | Pass criteria |
-|------|--------|---------------|
-| 0.1 | `docker compose --profile local up -d` | `docker compose ps` shows healthy containers |
-| 0.2 | Open Attack Panel http://localhost:5001 | Header: **TARGET ONLINE**, **LLM ONLINE** |
-| 0.3 | Install Splunk compliance app — [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) | App visible in Splunk |
-| 0.4 | Configure HEC → index `acme_agentic_telemetry`, sourcetype `otel:agentic:json` | See Setup Guide dashboard |
-| 0.5 | Run benign loan on http://localhost:5000 | Splunk Overview shows events > 0 |
+You do **not** need to understand Docker, Splunk, or AI to complete Level 0. Follow each step in order. If a step says **PASS**, you are done with that step. If something does not match **PASS**, use the troubleshooting table at the end of this section or ask your facilitator.
 
-**Verification SPL:**
+### What you are setting up (plain language)
 
-```spl
-`acme_genai_index` earliest=-15m
-| stats count by gen_ai.agent.name
+Think of the lab as three websites that work together:
+
+| Piece | What it is | Address (on your laptop) |
+|-------|------------|--------------------------|
+| **Banking app** | A fake bank loan system with four AI assistants | http://localhost:5000 |
+| **Attack Panel** | The workshop remote control — runs practice attacks | http://localhost:5001 |
+| **Splunk** | Where security logs appear as charts and tables | http://localhost:8000 |
+
+Behind the scenes, Docker runs several small programs (containers) on your machine. You only need to open those three URLs in your browser for Level 0.
+
+> **Using a cloud server instead of your laptop?**  
+> Replace `localhost` with your server’s address (for example `http://203.0.113.50:5001`). Firewall steps: [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md).
+
+> **Using Splunk Cloud instead of local Splunk?**  
+> You still complete Level 0 for the banking app and Attack Panel. Splunk steps use **your Splunk Cloud URL** in the browser — see [Path B](#path-b--splunk-cloud-or-company-splunk-no-local-splunk-container) below.
+
+---
+
+### Before you start — checklist
+
+Ask your facilitator or IT contact if you are unsure. You need:
+
+- [ ] A computer with **Docker Desktop** installed (Mac/Windows) or Docker on Linux  
+- [ ] At least **16 GB RAM** recommended if Splunk runs on the same machine  
+- [ ] Internet access for the first startup (downloads the AI model, ~1.3 GB)  
+- [ ] A web browser (Chrome, Edge, or Firefox)  
+- [ ] The OrchestraACME project folder (from `git clone` or a zip from your instructor)  
+- [ ] About **30–60 minutes** on first boot — Splunk and the AI model take time to start  
+
+**You do not need:** a Splunk license separately (local lab includes one in Docker), or your own OpenAI API key.
+
+---
+
+### Choose your setup path
+
+| Path | Splunk runs… | Start command |
+|------|--------------|---------------|
+| **A — Local lab (most classrooms)** | In Docker on your machine | `docker compose --profile local up --build -d` |
+| **B — Splunk Cloud / company Splunk** | On Splunk Cloud or another server | `docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d` |
+
+Path **A** is the default in this guide. Path **B** skips the local Splunk container; your admin configures HEC — see [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) Section 2.
+
+---
+
+### Step 0.1 — Start the lab software
+
+**Who does this:** Usually one person per machine (facilitator or tech lead). Learners can watch or follow along.
+
+1. Open a **terminal** (Mac: Terminal app; Windows: PowerShell or Git Bash; Linux: your shell).
+
+2. Go to the project folder:
+
+   ```bash
+   cd OrchestraACME
+   ```
+
+   *(Use the actual folder name where you cloned the repo.)*
+
+3. Copy the settings template (first time only):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   This creates a configuration file. Defaults are fine for Level 0.
+
+4. Start everything (**Path A — local Splunk**):
+
+   ```bash
+   docker compose --profile local up --build -d
+   ```
+
+   - The first run can take **5–15 minutes**.  
+   - `-d` means “run in the background” so you can close the terminal window later.  
+   - **PASS:** The command finishes without a red `ERROR` line.
+
+5. Check that services are running:
+
+   ```bash
+   docker compose ps
+   ```
+
+   **PASS:** You see containers such as `acme_banking_app`, `acme_attack_panel`, `acme_ollama`, `acme_otel_collector`, and `acme_splunk`. Most show `healthy` or `running` after a few minutes.
+
+6. **Wait for the AI model** (important — do not skip):
+
+   ```bash
+   docker compose logs -f ollama
+   ```
+
+   Watch until you see a message that the model **`llama3.2:1b`** was pulled or is ready. Press **Ctrl+C** to stop watching logs.
+
+   **PASS:** Ollama log shows the model is available.  
+   **If stuck here:** Wait up to 10 minutes on a slow connection. Ask facilitator to run `docker compose logs ollama` and check disk space.
+
+**Optional — see live startup logs for all services:**
+
+```bash
+docker compose logs -f
 ```
+
+Press **Ctrl+C** when bored — services keep running.
+
+---
+
+### Step 0.2 — Open the Attack Panel and check the lights
+
+**Who does this:** Everyone.
+
+1. Open your browser.
+
+2. Go to: **http://localhost:5001**  
+   *(Cloud VM: `http://<your-server-ip>:5001`)*
+
+3. Look at the **top bar** of the page (dark header). You should see two status lines:
+
+   | Status text | Meaning | PASS |
+   |-------------|---------|------|
+   | **TARGET ONLINE** (green) | Banking app is reachable | ✅ |
+   | **LLM ONLINE** (green) | AI model is ready | ✅ |
+
+4. If you see **TARGET OFFLINE** or **LLM OFFLINE** (red):
+
+   - Wait 2–3 more minutes and refresh the page (F5).  
+   - Confirm Step 0.1 finished and Ollama pulled the model.  
+   - Run in terminal: `curl -s http://localhost:5000/health` — should return JSON with `"status": "healthy"`.
+
+**PASS:** Both **TARGET ONLINE** and **LLM ONLINE** are green.
+
+You should also see tabs such as **// Workshop** and **// Top 10 Scenarios**. Stay on **// Workshop** for later levels.
+
+---
+
+### Step 0.3 — Install the Splunk dashboard app
+
+**Who does this:** Facilitator or anyone with Splunk admin on the lab instance.  
+**What this does:** Adds the **GenAI Compliance Monitor** menus and dashboards inside Splunk.
+
+#### Path A — Local Splunk in Docker
+
+1. In terminal, from the `OrchestraACME` folder, build the install package (one time):
+
+   ```bash
+   chmod +x scripts/package_splunk_app.sh
+   ./scripts/package_splunk_app.sh
+   ```
+
+   **PASS:** File exists: `dist/acme_genai_compliance-2.4.0.tar.gz` (version number may differ slightly).
+
+2. Copy the app into Splunk and install it:
+
+   ```bash
+   docker cp dist/acme_genai_compliance-2.4.0.tar.gz acme_splunk:/tmp/
+   docker compose exec splunk /opt/splunk/bin/splunk install app \
+     /tmp/acme_genai_compliance-2.4.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+   docker compose exec splunk /opt/splunk/bin/splunk restart
+   ```
+
+   When prompted about the certificate or restart, accept defaults. Splunk restarts in **1–3 minutes**.
+
+3. Open Splunk in your browser: **http://localhost:8000**
+
+4. Log in:
+
+   | Field | Default lab value |
+   |-------|-------------------|
+   | Username | `admin` |
+   | Password | `ACMEPassword2026!` |
+
+   *(Change this password in real deployments — see [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md).)*
+
+5. After login, open the app picker (top left). **PASS:** You see **GenAI Compliance Monitor** (or `acme_genai_compliance`).
+
+6. Click **GenAI Compliance Monitor → Setup Guide** and skim the first page — it explains index and HEC in more detail.
+
+**Full install reference:** [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) Section 4.
+
+#### Path B — Splunk Cloud or company Splunk
+
+1. Ask your Splunk admin to install `dist/acme_genai_compliance-2.4.0.tar.gz` and create:
+
+   - Index: `acme_agentic_telemetry`  
+   - HEC token with sourcetype `otel:agentic:json`  
+
+2. Admin puts the HEC URL and token into your lab machine’s `.env` file (`SPLUNK_HEC_ENDPOINT`, `SPLUNK_HEC_TOKEN`).
+
+3. Start lab with external Splunk (Step 0.1 command Path B).
+
+4. Log in to **your Splunk Cloud URL** (not localhost:8000). **PASS:** **GenAI Compliance Monitor** app appears.
+
+**Full install reference:** [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) Section 2.
+
+---
+
+### Step 0.4 — Confirm logs can reach Splunk (HEC)
+
+**What HEC means:** HTTP Event Collector — the pipe that sends security events from the lab into Splunk. You usually configure this once.
+
+#### Path A — Local Splunk (default `.env`)
+
+The lab ships with a **default HEC token** in `.env` that matches the Docker Splunk container. For Level 0 you typically **do not** need to change anything if you used `cp .env.example .env` and Path A.
+
+**Quick check:**
+
+1. In Splunk (http://localhost:8000), go to **Settings → Data inputs → HTTP Event Collector**.  
+2. **PASS:** HEC is **enabled**, and a token exists (often pre-created for the lab).
+
+3. Open **GenAI Compliance Monitor → Setup Guide** inside Splunk.  
+4. **PASS:** The guide shows your index name `acme_agentic_telemetry` and sourcetype `otel:agentic:json`.
+
+If events never appear after Step 0.5, ask your facilitator to verify `SPLUNK_HEC_TOKEN` in `.env` matches Splunk’s token — see README “Splunk quick checklist”.
+
+#### Path B — Splunk Cloud
+
+Your admin confirms `.env` on the lab machine has the correct **Splunk Cloud HEC URL** (starts with `https://http-inputs-`) and token. **PASS:** Facilitator runs a test ingest or you complete Step 0.5 and see events in Splunk Cloud Search.
+
+---
+
+### Step 0.5 — Send harmless “normal” traffic (not an attack)
+
+**Why:** The workshop compares **normal** loan traffic with **attack** traffic. This step creates a few normal events in Splunk.
+
+**Who does this:** Everyone.
+
+1. Open the banking app: **http://localhost:5000**
+
+2. You should see a simple **loan application** page with a text box.
+
+3. Type a normal message, for example:
+
+   ```text
+   I would like to apply for a small business loan. Annual revenue is $250,000.
+   ```
+
+4. Click the button to **run the application through all agents** (wording may be “Run Through All Agents” or “Process” — use the main green/submit action on the page).
+
+5. Wait **30–60 seconds** for logs to travel: Banking app → collector → Splunk.
+
+6. Open Splunk → **GenAI Compliance Monitor → Overview**
+
+7. **PASS (non-technical):** A number greater than **0** appears for total events (for example “Total Security Events”). Charts may show agent names.
+
+8. **PASS (technical optional):** In **Search**, run:
+
+   ```spl
+   `acme_genai_index` earliest=-15m
+   | stats count by gen_ai.agent.name
+   ```
+
+   You should see counts for agents such as `acme-agent-intake-001`.
+
+If Overview shows **0** events, wait another 60 seconds and click refresh. Still zero → see troubleshooting below.
+
+---
+
+### Level 0 complete — final checklist
+
+Check every box before moving to [Level 1](#level-1--pipeline-proof-everyone):
+
+- [ ] `docker compose ps` shows main containers running  
+- [ ] http://localhost:5001 → **TARGET ONLINE** and **LLM ONLINE**  
+- [ ] http://localhost:8000 → Splunk login works (Path A) *or* Splunk Cloud login works (Path B)  
+- [ ] **GenAI Compliance Monitor** app visible in Splunk  
+- [ ] **Overview** dashboard shows event count **> 0** after the benign loan (Step 0.5)  
+- [ ] You know which URL to use for Attack Panel and Splunk for the rest of the workshop  
+
+**Congratulations — Level 0 is complete.**  
+Next: [Level 1 — Pipeline proof](#level-1--pipeline-proof-everyone) (**▶ RUN FIRST WIN PATH** on the Attack Panel).
+
+---
+
+### Level 0 troubleshooting (plain language)
+
+| What you see | Likely cause | What to try |
+|--------------|--------------|-------------|
+| `docker compose` command not found | Docker not installed or not running | Start **Docker Desktop**; reopen terminal |
+| Attack Panel **LLM OFFLINE** | Model still downloading | `docker compose logs -f ollama` — wait for `llama3.2:1b` |
+| Attack Panel **TARGET OFFLINE** | Banking container not up | `docker compose ps` — restart: `docker compose --profile local up -d` |
+| Splunk login page won’t load | Splunk still starting (up to 8 min) | `docker compose logs -f splunk` — wait for “running” |
+| Splunk **Overview** shows 0 events | HEC not wired or too soon | Wait 60s after Step 0.5; check Setup Guide; verify `.env` HEC token |
+| Browser can’t open `:5001` on cloud VM | Firewall | Open ports per [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
+| `permission denied` on scripts | Script not executable | `chmod +x scripts/package_splunk_app.sh` |
+| Everything slow | Not enough RAM | Close other apps; use machine with 16+ GB RAM |
+
+**Still stuck?** Collect for your facilitator: output of `docker compose ps`, screenshot of Attack Panel header, and screenshot of Splunk Overview.
+
+---
+
+### Facilitator notes for Level 0
+
+- Run Step 0.5 **once per room** on a shared screen so everyone sees Overview go from 0 → non-zero.  
+- For mixed audiences: non-technical learners only need Steps **0.2**, **0.5**, and Splunk **Overview**; tech lead does **0.1**, **0.3**, **0.4**.  
+- Budget **15 minutes** after `docker compose up` before declaring failure — Splunk and Ollama are slow on first boot.  
+- Default Splunk password is for **lab only** — rotate on any internet-facing VM.
 
 ---
 

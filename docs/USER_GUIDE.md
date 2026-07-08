@@ -21,6 +21,8 @@ cp .env.example .env
 docker compose --profile local up --build -d
 ```
 
+> **Cloud VM (AWS EC2 / Azure / Google Compute Engine):** See [docs/CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) for which ports to open on security groups / firewalls (`5000`, `5001`, `8000` restricted — never expose `8088`, `11434`, or OTel ports to the internet).
+
 Wait for Ollama (`docker compose logs -f ollama`). Install the Splunk app — [splunk_app/INSTALL.md](../splunk_app/INSTALL.md).
 
 Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firing attacks.
@@ -35,7 +37,9 @@ Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firin
 
 ## The Workshop
 
-> **Ordered curriculum (start here):** **[WORKSHOP.md](WORKSHOP.md)** — Levels 0–5, role tracks, BOTS-style hunt questions (Q101–Q503), facilitator runbook.
+> **Full curriculum + verbose overview:** **[WORKSHOP.md](WORKSHOP.md)** — why teams run it, deliverables, daily-work skills by role, Levels 0–5, hunt questions Q101–Q503.
+
+The OrchestraACME Workshop is a **hands-on lab**, not a slide deck: learners attack a live multi-agent banking app, observe runtime controls (block / allow / detect-only), and **prove outcomes in Splunk**. Skills transfer directly to SOC triage, detection engineering, architecture reviews, and GRC evidence — see [About the OrchestraACME Workshop](WORKSHOP.md#about-the-orchestraacme-workshop) for full detail.
 
 The Attack Panel **// Workshop** tab runs guided attack paths. **Splunk Search** is where learners answer hunt questions — same pattern as [Splunk BOTS](https://github.com/splunk/botsv3). See [Splunk vs Jupyter](WORKSHOP.md#splunk-vs-jupyter--recommendation).
 
