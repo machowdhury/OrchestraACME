@@ -1,0 +1,230 @@
+# =============================================================================
+# OrchestraACME Multi-Agent Container Range
+# Principal DevSecOps Systems Engineering — Lab Stack Definition
+# =============================================================================
+#
+# All services communicate exclusively over the internal shared bridge network
+# 'acme-sec-net'. No service should bind to host interfaces beyond the explicit
+# port mappings defined below unless additional exposure is intentionally added.
+#
+# Quick Start:
+#   docker compose up -d
+#
+# Splunk Toggle:
+#   - LOCAL (default):  Keep the 'splunk' service block uncommented below.
+#   - EXTERNAL/CLOUD:   Comment out the entire 'splunk' service block, then
+#                       switch the otel-collector exporter in
+#                       ./config/otel-collector-config.yaml to Option B.
+# =============================================================================
+
+name: orchestra-acme
+
+networks:
+  acme-sec-net:
+    name: acme-sec-net
+    driver: bridge
+    internal: false
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Ollama — Local LLM Inference Engine
+  # Internal Port: 11434 (not published to host by default)
+  # On container creation, automatically pulls the lightweight llama3.2:1b model.
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: orchestra-acme-ollama
+    restart: unless-stopped
+    networks:
+      - acme-sec-net
+    volumes:
+      - ollama_models:/root/.ollama
+    # Inline entrypoint initialization block:
+    #   1. Start the Ollama API server in the background
+    #   2. Wait for the daemon to become ready
+    #   3. Pull the lightweight llama3.2:1b model on first creation
+    #   4. Block on the background server process to keep the container alive
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        echo "[orchestra-acme/ollama] Starting Ollama inference daemon..."
+        ollama serve &
+        OLLAMA_PID=$$!
+
+        echo "[orchestra-acme/ollama] Waiting for Ollama API readiness on :11434..."
+        READY=0
+        for i in $$(seq 1 60); do
+          if ollama list > /dev/null 2>&1; then
+            READY=1
+            break
+          fi
+          sleep 2
+        done
+
+        if [ "$$READY" -ne 1 ]; then
+          echo "[orchestra-acme/ollama] ERROR: Ollama API did not become ready in time."
+          kill "$$OLLAMA_PID" 2>/dev/null || true
+          exit 1
+        fi
+
+        echo "[orchestra-acme/ollama] Pulling lightweight model: llama3.2:1b"
+        ollama pull llama3.2:1b
+
+        echo "[orchestra-acme/ollama] Model pull complete. Ollama is ready."
+        wait "$$OLLAMA_PID"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # GPU reservation is optional; remove the 'deploy' block above on CPU-only hosts.
+
+  # ---------------------------------------------------------------------------
+  # Banking Application — Defensive Agent Target / Benign Workload
+  # Host Port: 5000 -> Container Port: 5000
+  # ---------------------------------------------------------------------------
+  banking_app:
+    build:
+      context: ./apps
+      dockerfile: Dockerfile
+    image: orchestra-acme/banking_app:latest
+    container_name: orchestra-acme-banking-app
+    restart: unless-stopped
+    command: ["python", "app_runtime.py"]
+    networks:
+      - acme-sec-net
+    ports:
+      - "5000:5000"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel_collector:4318
+      OTEL_SERVICE_NAME: orchestra-acme-banking-app
+      OLLAMA_BASE_URL: http://ollama:11434
+    depends_on:
+      otel_collector:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:5000/health > /dev/null || curl -sf http://127.0.0.1:5000/ > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Attack Panel — Offensive Agent / Red-Team Control Surface
+  # Host Port: 5001 -> Container Port: 5001
+  # ---------------------------------------------------------------------------
+  attack_panel:
+    build:
+      context: ./apps
+      dockerfile: Dockerfile
+    image: orchestra-acme/attack_panel:latest
+    container_name: orchestra-acme-attack-panel
+    restart: unless-stopped
+    command: ["python", "exploit_ui.py"]
+    networks:
+      - acme-sec-net
+    ports:
+      - "5001:5001"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel_collector:4318
+      OTEL_SERVICE_NAME: orchestra-acme-attack-panel
+      BANKING_APP_URL: http://banking_app:5000
+      OLLAMA_BASE_URL: http://ollama:11434
+    depends_on:
+      banking_app:
+        condition: service_started
+      otel_collector:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:5001/health > /dev/null || curl -sf http://127.0.0.1:5001/ > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # OpenTelemetry Collector — Telemetry Aggregation and Export
+  # Internal only (no host port bindings); OTLP gRPC :4317, HTTP :4318
+  # Configuration mounted from ./config/otel-collector-config.yaml
+  # ---------------------------------------------------------------------------
+  otel_collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: orchestra-acme-otel-collector
+    restart: unless-stopped
+    networks:
+      - acme-sec-net
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      splunk:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:13133/ > /dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Splunk Enterprise — Local Telemetry Sink (DEFAULT)
+  # ---------------------------------------------------------------------------
+  # TOGGLE INSTRUCTIONS:
+  #   LOCAL INGESTION (default):
+  #     - Keep this entire 'splunk' service block ACTIVE (uncommented).
+  #     - Ensure otel-collector-config.yaml uses Option A (Local Ingestion).
+  #
+  #   EXTERNAL / SPLUNK CLOUD / CORPORATE INSTANCE:
+  #     - Comment out this ENTIRE 'splunk' service block (from 'splunk:' through
+  #       its closing healthcheck/deploy section).
+  #     - Remove or comment the 'depends_on: splunk' stanza under
+  #       'otel_collector' above.
+  #     - Switch otel-collector-config.yaml to Option B (External/Cloud).
+  #     - Provide your external HEC endpoint and token in that file.
+  # ---------------------------------------------------------------------------
+  splunk:
+    image: splunk/splunk:9.2.1
+    container_name: orchestra-acme-splunk
+    restart: unless-stopped
+    networks:
+      - acme-sec-net
+    ports:
+      - "8000:8000"   # Splunk Web UI
+      - "8088:8088"   # HTTP Event Collector (HEC)
+    environment:
+      SPLUNK_START_ARGS: "--accept-license"
+      SPLUNK_PASSWORD: "ACMEPassword2026!"
+      SPLUNK_HEC_TOKEN: "00000000-0000-4000-8000-ACMEHECLOCAL01"
+      SPLUNK_GENERAL_TERMS: "--accept-sgt-current-at-splunk-com"
+    volumes:
+      - splunk_etc:/opt/splunk/etc
+      - splunk_var:/opt/splunk/var
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/ > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+volumes:
+  ollama_models:
+    name: orchestra-acme-ollama-models
+  splunk_etc:
+    name: orchestra-acme-splunk-etc
+  splunk_var:
+    name: orchestra-acme-splunk-var

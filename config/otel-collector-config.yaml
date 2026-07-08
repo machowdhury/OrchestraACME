@@ -1,0 +1,182 @@
+# =============================================================================
+# OrchestraACME OpenTelemetry Collector Configuration
+# Principal DevSecOps Systems Engineering — Telemetry Pipeline Definition
+# =============================================================================
+#
+# Pipeline Summary:
+#   Receivers  -> otlp (gRPC :4317, HTTP :4318)
+#   Processors -> batch (strict 1s timeout window)
+#   Exporters  -> splunk_hec (Option A: Local | Option B: External/Cloud)
+#
+# Global Default Sourcetype: cisco:aidefense:json
+#
+# Splunk Exporter Toggle:
+#   Option A (Local Ingestion Default):
+#     - Active by default in the 'exporters' and 'service.pipelines' sections.
+#   Option B (External/Cloud Ingestion):
+#     - Comment out Option A blocks and uncomment Option B blocks in BOTH
+#       the 'exporters' section and the 'service.pipelines' section below.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Extensions
+# -----------------------------------------------------------------------------
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /
+
+  # Optional: enable for debugging pipeline issues during lab bring-up
+  # zpages:
+  #   endpoint: 0.0.0.0:55679
+
+# -----------------------------------------------------------------------------
+# Receivers
+# -----------------------------------------------------------------------------
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+# -----------------------------------------------------------------------------
+# Processors
+# -----------------------------------------------------------------------------
+processors:
+  batch:
+    # Strict 1-second timeout window — batches are flushed every 1s maximum
+    timeout: 1s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+
+  # Optional: enrich all telemetry with OrchestraACME lab metadata
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: orchestra-acme-lab
+        action: upsert
+      - key: telemetry.sdk.language
+        value: otel-collector
+        action: upsert
+
+# -----------------------------------------------------------------------------
+# Exporters
+# -----------------------------------------------------------------------------
+exporters:
+
+  # ===========================================================================
+  # Option A — LOCAL INGESTION (DEFAULT)
+  # Target: http://splunk:8088/services/collector/event
+  # Token:  Local HEC token (must match SPLUNK_HEC_TOKEN in docker-compose.yml)
+  # ===========================================================================
+  splunk_hec:
+    # Splunk HEC endpoint on the internal acme-sec-net bridge network
+    endpoint: "http://splunk:8088/services/collector/event"
+    token: "00000000-0000-4000-8000-ACMEHECLOCAL01"
+    # Global default sourcetype string parameter (enforced)
+    sourcetype: "cisco:aidefense:json"
+    source: "orchestra-acme-otel-collector"
+    index: "main"
+    max_content_length_logs: 1048576
+    disable_compression: false
+    tls:
+      insecure_skip_verify: false
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
+
+  # ===========================================================================
+  # Option B — EXTERNAL / SPLUNK CLOUD / CORPORATE INGESTION
+  # ---------------------------------------------------------------------------
+  # TO ACTIVATE Option B:
+  #   1. Comment out the entire 'splunk_hec' block (Option A) above.
+  #   2. Uncomment the 'splunk_hec_external' block below.
+  #   3. Replace placeholder values with your real external endpoint and token.
+  #   4. In 'service.pipelines' below, comment Option A exporter references
+  #      and uncomment Option B exporter references.
+  #   5. Comment out the 'splunk' service in docker-compose.yml.
+  # ===========================================================================
+  # splunk_hec_external:
+  #   # Placeholder: replace with your Splunk Cloud or corporate HEC URL
+  #   # Example: "https://http-inputs-YOUR_TENANT.splunkcloud.com/services/collector/event"
+  #   endpoint: "https://YOUR_SPLUNK_CLOUD_OR_CORPORATE_HOST/services/collector/event"
+  #   # Placeholder: replace with your Splunk Cloud or corporate HEC token
+  #   token: "YOUR_SPLUNK_CLOUD_OR_CORPORATE_HEC_TOKEN"
+  #   # Global default sourcetype string parameter (enforced)
+  #   sourcetype: "cisco:aidefense:json"
+  #   source: "orchestra-acme-otel-collector"
+  #   index: "main"
+  #   max_content_length_logs: 1048576
+  #   disable_compression: false
+  #   tls:
+  #     insecure_skip_verify: false
+  #   retry_on_failure:
+  #     enabled: true
+  #     initial_interval: 5s
+  #     max_interval: 30s
+  #     max_elapsed_time: 300s
+  #   sending_queue:
+  #     enabled: true
+  #     num_consumers: 4
+  #     queue_size: 1000
+
+  # Debug exporter — uncomment for local pipeline troubleshooting only
+  # debug:
+  #   verbosity: detailed
+  #   sampling_initial: 5
+  #   sampling_thereafter: 200
+
+# -----------------------------------------------------------------------------
+# Service — Pipeline Wiring
+# -----------------------------------------------------------------------------
+service:
+  extensions: [health_check]
+
+  pipelines:
+
+  # ---------------------------------------------------------------------------
+  # Logs Pipeline
+  # ---------------------------------------------------------------------------
+    logs:
+      receivers: [otlp]
+      processors: [resource, batch]
+      # Option A (Local Ingestion Default):
+      exporters: [splunk_hec]
+      # Option B (External/Cloud Ingestion) — uncomment line below, comment line above:
+      # exporters: [splunk_hec_external]
+
+  # ---------------------------------------------------------------------------
+  # Metrics Pipeline
+  # ---------------------------------------------------------------------------
+    metrics:
+      receivers: [otlp]
+      processors: [resource, batch]
+      # Option A (Local Ingestion Default):
+      exporters: [splunk_hec]
+      # Option B (External/Cloud Ingestion) — uncomment line below, comment line above:
+      # exporters: [splunk_hec_external]
+
+  # ---------------------------------------------------------------------------
+  # Traces Pipeline
+  # ---------------------------------------------------------------------------
+    traces:
+      receivers: [otlp]
+      processors: [resource, batch]
+      # Option A (Local Ingestion Default):
+      exporters: [splunk_hec]
+      # Option B (External/Cloud Ingestion) — uncomment line below, comment line above:
+      # exporters: [splunk_hec_external]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed

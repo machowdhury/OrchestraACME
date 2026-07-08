@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+
+# Docker
+.docker/
+
+# Splunk / lab runtime data
+*.log
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets — never commit real tokens or passwords
+secrets/
+*.pem
+*.key
+credentials.json
