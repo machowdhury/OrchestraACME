@@ -123,6 +123,6 @@ Saved searches (ship disabled): **MLTK: CTSM Token Surge**, **Behavioral RAG Ano
 
 ## Blog alignment
 
-Public mapping of 10-week campaign blog tracks to lab surfaces: [docs/BLOG_LAB_ALIGNMENT.md](BLOG_LAB_ALIGNMENT.md).
+Workshop paths that cover Cisco + MLTK demos are documented in [WORKSHOP.md](WORKSHOP.md) Level 4B.
 
 Private author prompts remain in `docs/private/` (gitignored).

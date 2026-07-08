@@ -77,7 +77,7 @@
 
   <row>
     <panel>
-      <title>Campaign Week Activity</title>
+      <title>Scenario Activity</title>
       <table>
         <search>
           <query>`acme_genai_index` $time_range$ campaign_week=*

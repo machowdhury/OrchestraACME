@@ -19,7 +19,7 @@ OrchestraACME exercises **eight realistic threat surfaces** that emerge when org
 | 9 | **RAG / knowledge exfiltration** | Retrieval | Scenario 9 | `galileo_observe_alert`, `vector_retrieval_count` |
 | 10 | **Autonomous escape & containment** | Memory / SOC | Scenario 10 | `memory.policy.rule_id`, `containment.action=QUARANTINE` |
 
-> Scenarios 1–10 in the attack panel correspond to rows above (labeled **Scenario n** in the UI; Splunk macros `` `acme_campaign_w1` `` … `` `acme_campaign_w10` `` use the same numbers).
+> Scenarios 1–10 in the attack panel correspond to rows above (labeled **Scenario n** in the UI). Splunk search macros for each scenario are listed in the in-app **Setup Guide**.
 
 ---
 

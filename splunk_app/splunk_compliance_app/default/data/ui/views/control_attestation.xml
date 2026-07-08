@@ -1,6 +1,6 @@
 <dashboard version="1.1">
   <label>Control Attestation</label>
-  <description>Measurable NIST AI RMF control evidence — pass/fail per campaign week and workflow surface.</description>
+  <description>Measurable NIST AI RMF control evidence — pass/fail per scenario and workflow surface.</description>
 
   <fieldset submitButton="true" autoRun="true">
     <input type="time" token="time_range">
@@ -8,18 +8,18 @@
       <default><earliest>-7d</earliest><latest>now</latest></default>
     </input>
     <input type="dropdown" token="campaign_week">
-      <label>Campaign Week</label>
+      <label>Scenario</label>
       <choice value="*">All</choice>
-      <choice value="1">W1 - Code Compliance Illusion</choice>
-      <choice value="2">W2 - Evaluation Harness</choice>
-      <choice value="3">W3 - Vibe Coding</choice>
-      <choice value="4">W4 - Shadow SLM</choice>
-      <choice value="5">W5 - Front Desk</choice>
-      <choice value="6">W6 - MCP Tools</choice>
-      <choice value="7">W7 - Infinity Bill</choice>
-      <choice value="8">W8 - Identity</choice>
-      <choice value="9">W9 - Invisible Leak</choice>
-      <choice value="10">W10 - Self-Healing SOC</choice>
+      <choice value="1">Scenario 1 — Code Compliance Illusion</choice>
+      <choice value="2">Scenario 2 — Evaluation Harness</choice>
+      <choice value="3">Scenario 3 — Vibe Coding</choice>
+      <choice value="4">Scenario 4 — Shadow SLM</choice>
+      <choice value="5">Scenario 5 — Front Desk</choice>
+      <choice value="6">Scenario 6 — MCP Tools</choice>
+      <choice value="7">Scenario 7 — Infinity Bill</choice>
+      <choice value="8">Scenario 8 — Identity</choice>
+      <choice value="9">Scenario 9 — Invisible Leak</choice>
+      <choice value="10">Scenario 10 — Self-Healing SOC</choice>
       <default>*</default>
     </input>
   </fieldset>

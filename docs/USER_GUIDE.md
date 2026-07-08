@@ -6,7 +6,7 @@ Run the lab from the **Attack Panel**, generate telemetry, hunt in Splunk, and *
 **Banking app:** http://localhost:5000  
 **Splunk:** http://localhost:8000 (local Docker profile)
 
-> **Terminology:** The lab uses **Scenario 1–10** (one per agentic threat surface). Splunk macros still use `acme_campaign_w1` … `w10` and events carry `campaign_week=1..10` — same numbers, different label.
+> **Terminology:** The Attack Panel and workshop use **Scenario 1–10** (one per agentic threat surface). In Splunk telemetry the scenario index is stored in the numeric field `campaign_week` (values 1–10) — use that field in SPL, not the phrase “campaign week” in reports or training materials.
 
 **New here?** Complete [Prerequisites](#prerequisites), then follow the ordered curriculum in **[WORKSHOP.md](WORKSHOP.md)** and run **Level 1 — First Win**.
 
@@ -39,7 +39,7 @@ Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firin
 
 > **Full curriculum + verbose overview:** **[WORKSHOP.md](WORKSHOP.md)** — why teams run it, deliverables, daily-work skills by role, Levels 0–5, hunt questions Q101–Q503.
 
-The OrchestraACME Workshop is a **hands-on lab**, not a slide deck: learners attack a live multi-agent banking app, observe runtime controls (block / allow / detect-only), and **prove outcomes in Splunk**. Skills transfer directly to SOC triage, detection engineering, architecture reviews, and GRC evidence — see [About the OrchestraACME Workshop](WORKSHOP.md#about-the-orchestraacme-workshop) for full detail.
+The OrchestraACME Workshop is a **hands-on lab**, not theory-only training: learners attack a live multi-agent banking app, observe runtime controls (block / allow / detect-only), and **prove outcomes in Splunk**. Skills transfer directly to SOC triage, detection engineering, architecture reviews, and GRC evidence — see [About the OrchestraACME Workshop](WORKSHOP.md#about-the-orchestraacme-workshop) for full detail.
 
 The Attack Panel **// Workshop** tab runs guided attack paths. **Splunk Search** is where learners answer hunt questions — same pattern as [Splunk BOTS](https://github.com/splunk/botsv3). See [Splunk vs Jupyter](WORKSHOP.md#splunk-vs-jupyter--recommendation).
 
@@ -267,7 +267,7 @@ After each action: wait **30–60 seconds**.
 | Prove telemetry | Workshop **First Win** or any **▶ FIRE SCENARIO n** | **Overview** | `gen_ai.agent.*` on `otel:agentic:json` events |
 | Input/output blocking | **Scenario 3** or **5** | **Control Attestation** | `codeguard_blocked`, `defenseclaw.action`, `control.status` |
 | Workflow-surface blocks | **Scenario 2**, **6**, or **8** | **Detection Efficacy** | `workflow.block_reason` (orchestration, MCP, A2A) |
-| All 10 surfaces | **FIRE ALL 10 SCENARIOS** (Workshop) | **Control Attestation** | `campaign_week=1..10` + NIST fields |
+| All 10 surfaces | **FIRE ALL 10 SCENARIOS** (Workshop) | **Control Attestation** | Scenarios 1–10 + NIST fields |
 | Technique breadth | **RUN ALL 45** or Deep Workshop | **Technique Coverage Matrix** | `technique_id` → OBSERVED / NOT_OBSERVED |
 | Multi-stage story | **KC-C001** or Standard Workshop | **Actor Chain Story** | Shared `incident_id` across stages |
 | Detect-only RAG | **Scenario 9** | Threat Hunting / Overview | `galileo_observe_alert` without always blocking |
@@ -309,7 +309,7 @@ All dashboards read `` `acme_genai_index` `` (default: `index=acme_agentic_telem
 | 1 | **Setup Guide** | Admin | HEC, index, macros, Splunk Cloud wiring |
 | 2 | **Overview** | Everyone | “Is the lab alive?” — event volume, severity, agents |
 | 3 | **Detection Efficacy** | Detection engineer | Coverage %, MTTD, workflow blocks, chain completeness |
-| 4 | **Control Attestation** | GRC / risk | NIST pass/fail per scenario (campaign week) |
+| 4 | **Control Attestation** | GRC / risk | NIST pass/fail per scenario |
 | 5 | **Technique Coverage** | Purple team | OBSERVED vs NOT_OBSERVED for all 45 techniques |
 | 6 | **Threat Hunting** | SOC analyst | Per-technique SPL playbooks + live results |
 | 7 | **Actor Chain Story** | Leadership / SOC | Rogue-actor narrative per `incident_id` |
@@ -368,7 +368,7 @@ Static HTML walkthrough (not data-driven).
 | Recent DefenseClaw Actions | Table | Last 20 output-gateway decisions (HARD_DENY, ALERT, etc.) |
 
 **Light up:** Banking app benign loan **or** Workshop **First Win**.  
-**Best for:** First demo slide — “we have telemetry.”
+**Best for:** First live demo — “we have telemetry.”
 
 ---
 
@@ -384,7 +384,7 @@ Static HTML walkthrough (not data-driven).
 | Control Pass Rate % | Single % | Latest `control.pass_rate_pct` from attestation |
 | Kill-Chain Stage Completeness | Table | Per `incident_id`: how many kill-chain stages seen (HIGH/MEDIUM/LOW) |
 | Workflow Surface Blocks | Pie chart | Breakdown of `workflow.block_reason` (MCP, A2A, orchestration, memory) |
-| Campaign Week Activity | Chart | Events per `campaign_week` (Scenario 1–10) |
+| Scenario Activity | Chart | Events per scenario (1–10) |
 
 **Light up:** **First Win** (workflow blocks) + **Standard Workshop** (chains) + **Deep Workshop** (coverage %).  
 **Best for:** “We can measure agentic detection efficacy.”
@@ -401,7 +401,7 @@ Static HTML walkthrough (not data-driven).
 | Latest Pass Rate | Single % | Most recent `control.pass_rate_pct` |
 | NIST Control Matrix | Table | Each scenario (week 1–10): expected control, pass signal, **PASS / FAIL / NOT_TESTED** |
 
-Filters: time range, campaign week (Scenario 1–10).
+Filters: time range, scenario (1–10).
 
 **Light up:** **FIRE ALL 10 SCENARIOS** or run scenarios individually.  
 **Best for:** Risk and compliance audiences.
@@ -523,7 +523,7 @@ Filters: scenario family (A–E), incident ID.
 | Agent Behavioral Drift | Table | 7d vs 30d CVSS baseline per agent (drift detection) |
 
 **Light up:** **FIRE ALL 10 SCENARIOS**.  
-**Best for:** Quarterly risk review slides.
+**Best for:** Quarterly risk review and executive summaries.
 
 ---
 
@@ -578,7 +578,7 @@ Filters: scenario family (A–E), incident ID.
 
 Wait **60 seconds** after each path before refreshing Splunk.
 
-See also: [WORKSHOP.md](WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [BLOG_LAB_ALIGNMENT.md](BLOG_LAB_ALIGNMENT.md)
+See also: [WORKSHOP.md](WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md)
 
 ---
 

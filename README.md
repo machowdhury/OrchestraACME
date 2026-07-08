@@ -14,15 +14,91 @@
 
 ## What Is This?
 
-**OrchestraACME** is an end-to-end **agentic AI security lab** that simulates a real multi-agent banking application, attacks it with adversarial prompts, defends it with runtime AI security controls, and streams everything into Splunk for detection engineering and compliance reporting.
+**OrchestraACME** is an end-to-end **agentic AI security lab**: a realistic multi-agent banking application you can attack on purpose, defend with runtime controls, and monitor in Splunk — the same loop security teams need before production agents go live.
 
-Unlike static slide decks or mocked demos, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
+Unlike theory-only training or scripted chatbot responses, this project runs **live LLM inference** (Ollama), **real HTTP attack traffic**, **workflow-surface policy enforcement** (tools, RAG, A2A, memory, orchestration), and **production-grade telemetry pipelines** — all in a single `docker compose --profile local up`.
 
-**Workshop curriculum:** [docs/WORKSHOP.md](docs/WORKSHOP.md) — ordered levels 0–5, role tracks, why teams run it, skills for daily work, BOTS-style hunt questions.  
-**User guide:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — Splunk dashboards and field reference.  
-**Threat surfaces:** [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) — eight agentic attack surfaces (2025–2026).
+### Why this project exists
 
-**Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — open an issue.
+Enterprises are shipping **agent chains** — intake, extraction, risk, compliance — but most security programs still test **one chatbot prompt at a time**. That misses where agentic risk actually lives: tool gateways, retrieval stores, cross-agent trust, memory persistence, and orchestration overrides. WAFs and API gateways rarely see those layers.
+
+OrchestraACME exists so practitioners can **practice on a controlled range** instead of learning on production:
+
+| Problem in the wild | What this lab lets you do |
+|---------------------|---------------------------|
+| No repeatable way to fire agentic attacks | Attack Panel sends real adversarial payloads through the same code paths production would use |
+| Controls claimed but never measured | Every scenario emits **PASS/FAIL control evidence** you can query in Splunk |
+| SIEM content written without GenAI telemetry | Hunts use live `otel:agentic:json` with `gen_ai.*`, `workflow.*`, and framework tags |
+| Compliance asks for “AI governance proof” | Events map to **NIST AI RMF**, OWASP LLM/ASI, MITRE ATLAS, and optional CSA MAESTRO layers |
+
+The goal is not to certify your bank — it is to give detection engineers, architects, and GRC teams **evidence they can defend in a review**.
+
+### What it offers
+
+| Capability | Value for your team |
+|------------|---------------------|
+| **Offense** | Ten Top 10 scenarios (Scenarios 1–10) plus 45-technique registry and kill chains — reproducible red-team inputs, not one-off demos |
+| **Defense** | Workflow guards (MCP, A2A, memory, orchestration) plus CodeGuard/DefenseClaw on every LLM call — see *where* a control fires (pre-LLM, post-LLM, detect-only) |
+| **Observability** | OpenTelemetry GenAI semantics end-to-end: tokens, latency, agent ID, block reason, trace/incident IDs |
+| **Detection engineering** | Splunk compliance app: coverage %, MTTD-style panels, actor-chain narrative, MLTK anomaly hunts (optional Cisco overlay) |
+| **Compliance narrative** | Control Attestation and NIST dashboards tie runtime events to framework controls — exportable for audit conversations |
+| **Honest gaps** | Some attacks **INJECT** despite controls — intentional. You learn what detections still need to be built |
+
+You walk away with **SPL you can adapt**, **dashboard screenshots**, and **architecture vocabulary** (block vs detect-only, surface vs prompt) — artifacts you can use in the SOC and in governance reviews the same week.
+
+### When to attack, defend, and explore
+
+| Moment | What to run | Why |
+|--------|-------------|-----|
+| **Before production agent rollout** | Scenarios 5–6 (output gateway + MCP tools) | Decide control placement while architecture is still flexible |
+| **During detection rule development** | Fire a scenario → hunt in Splunk within minutes | Validate correlation searches against real GenAI fields, not synthetic CSVs |
+| **Purple-team / coverage review** | Run All 45 Techniques → Technique Coverage Matrix | Quantify MITRE ATLAS OBSERVED vs NOT_OBSERVED for agentic techniques |
+| **Incident readiness drill** | Threat chain KC-C001 → Actor Chain Story | Practice multi-agent timelines and `incident_id` correlation |
+| **GRC / risk workshop** | Scenarios 1–10 → Control Attestation + NIST AI RMF | Show pass/fail per control with live telemetry, not policy PDFs alone |
+| **Architecture review** | Optional MAESTRO path → attack predicted layers | Close the loop: threat model → exploit → prove (or disprove) in Splunk |
+| **Regression after control changes** | Re-fire the same scenario IDs | Same payload, comparable fields — did your guardrail change improve outcomes? |
+
+**Attack Panel** (`http://localhost:5001`) is for offense and ordered workshop paths. **Banking app** (`http://localhost:5000`) is for seeing legitimate multi-agent flow. **Splunk** (`http://localhost:8000`) is where you prove outcomes — after you configure the index, HEC token, and compliance app (documented below; not automatic on first boot).
+
+### How compliance mapping works
+
+Compliance here means **traceable runtime evidence**, not a certification stamp:
+
+1. **You run a scenario** (Attack Panel → Top 10 or Workshop path).
+2. **The framework layer enriches each OTel event** with technique IDs (MITRE ATLAS), OWASP LLM/ASI tags, optional MAESTRO layers, and NIST control IDs from `control_matrix.yaml`.
+3. **`control_validator` evaluates pass/fail** per scenario — e.g. MCP scope violation blocked, jailbreak HARD_DENY, token depth within budget.
+4. **Splunk ingests `otel:agentic:json`** and dashboards roll up:
+   - **Control Attestation** — latest control status by scenario and `control.control_id`
+   - **NIST AI RMF Scoring** — GOVERN / MAP / MEASURE / MANAGE alignment from emitted evidence
+   - **Technique Coverage Matrix** — which of 45 techniques produced observable telemetry
+   - **Detection Efficacy** — blocks by workflow surface, scenario activity, chain completeness
+
+Use this in reviews as: *“For Scenario 6 (MCP tools), the MCP scope control **failed closed** — here is the Splunk row with `workflow.block_reason` and `control.control_id`.”* Field `campaign_week` in SPL is the **scenario index** (1–10); use “Scenario N” in narratives and reports.
+
+Optional **CSA MAESTRO** adds design-time threats (L2–L6) you then validate with attacks — see [docs/MAESTRO_WORKSHOP.md](docs/MAESTRO_WORKSHOP.md).
+
+### Why the workshop
+
+The **[Workshop curriculum](docs/WORKSHOP.md)** turns the lab into a **teaching system**: ordered Levels 0–5, role tracks (junior SOC → detection engineer → architect → GRC), and BOTS-style hunt questions (Q101–Q503). Most teams do not need to read every file in the repo — they need a path that answers:
+
+- *“What do I click first?”* → Level 0–1, 15-Minute First Win on the Attack Panel  
+- *“What SPL proves the control worked?”* → Q201+ with macros and field glossary  
+- *“How do I brief my manager?”* → Actor Chain Story + Control Attestation exports  
+
+Workshop paths are **one-click sequences** (First Win, Standard, Deep, Fire All 10, Cisco + MLTK, MAESTRO Validate) that chain attacks and tell you which Splunk dashboards to open next. That structure exists because agentic security spans offense, detection, and governance — and ad-hoc clicking does not build muscle memory.
+
+### Documentation
+
+| Doc | Use when you need… |
+|-----|-------------------|
+| [docs/WORKSHOP.md](docs/WORKSHOP.md) | Ordered curriculum, hunt questions, role quick-starts, why teams run it |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Splunk dashboards, field reference, troubleshooting |
+| [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) | Eight agentic attack surfaces (2025–2026) mapped to lab scenarios |
+| [docs/CISCO_INTEGRATION.md](docs/CISCO_INTEGRATION.md) | Optional AIBOM, MCP Scanner, Foundation-Sec-8B, CTSM overlay |
+| [docs/MAESTRO_WORKSHOP.md](docs/MAESTRO_WORKSHOP.md) | CSA MAESTRO threat modeling → attack → Splunk validation |
+| [docs/CLOUD_VM_DEPLOYMENT.md](docs/CLOUD_VM_DEPLOYMENT.md) | AWS / Azure / GCP ports and lab VM patterns |
+
+**Transparency goal:** This README explains what is real, what is simulated, what you must configure yourself, and what will *not* happen automatically. If something is unclear, that is a documentation bug — [open an issue](https://github.com/machowdhury/OrchestraACME/issues).
 
 ---
 
@@ -59,7 +135,7 @@ docker compose -f docker-compose.yml -f docker-compose.cisco.yml --profile local
 
 Attack panel → **Cisco + MLTK Anomaly Hunt** → Splunk **MLTK Anomaly Hunting** dashboard.
 
-Full guide: [docs/CISCO_INTEGRATION.md](docs/CISCO_INTEGRATION.md) · Blog mapping: [docs/BLOG_LAB_ALIGNMENT.md](docs/BLOG_LAB_ALIGNMENT.md)
+Full guide: [docs/CISCO_INTEGRATION.md](docs/CISCO_INTEGRATION.md)
 
 ### CSA MAESTRO threat modeling (optional)
 
@@ -286,7 +362,7 @@ docker compose --profile local up --build -d
 Use this lab to:
 
 - Execute a **4-agent loan processing chain** with live LLM reasoning
-- Launch **ten campaign-week adversarial scenarios** across real workflow surfaces (tools, RAG, A2A, memory, orchestration)
+- Launch **ten adversarial scenarios** (Scenarios 1–10) across real workflow surfaces (tools, RAG, A2A, memory, orchestration)
 - Enforce **layered runtime controls** — see [USER_GUIDE](docs/USER_GUIDE.md)
 - Validate **Splunk ES detection rules** against `otel:agentic:json` telemetry
 
@@ -526,7 +602,7 @@ Four execution surfaces for practitioners and customers:
 **Run everything:**
 
 ```bash
-# All 45 techniques (campaign)
+# All 45 techniques
 curl -X POST http://localhost:5001/api/techniques/execute-all \
   -H "Content-Type: application/json" -d '{"delay_seconds": 0.3}'
 
@@ -539,20 +615,20 @@ curl -X POST http://localhost:5001/api/chains/KC-C001/execute \
   -d '{"accelerated": true, "hybrid_live": true}'
 ```
 
-Ten **campaign-week** scenarios (W1–W10) in the attack panel, each targeting a **workflow surface** and emitting **NIST control evidence**:
+Ten **Top 10 scenarios** in the Attack Panel (Scenarios 1–10), each targeting a **workflow surface** and emitting **NIST control evidence**:
 
-| Week | Scenario | Surface | Block layer |
-|------|----------|---------|-------------|
-| W1 | Code Compliance Illusion | AI-BOM / prompt drift | AIBOM telemetry |
-| W2 | Agentic Evaluation Harness | Orchestration | `orchestration_guard` |
-| W3 | Secure-by-Default Vibe Coding | Prompt / markup | `codeguard` |
-| W4 | Shadow AI at the Edge | Unapproved SLM | Asset discovery |
-| W5 | Guarding the Front Desk | Semantic jailbreak | `defenseclaw` |
-| W6 | Intern with the Master Key | MCP tools | `mcp_gateway` |
-| W7 | The Infinity Bill | Token recursion | `call_depth_detected` |
-| W8 | Identity Fracture | A2A DID | `a2a_verifier` |
-| W9 | The Invisible Leak | RAG exfil | `galileo_observe` |
-| W10 | Self-Healing SOC | Memory + rogue agent | `memory_policy` + SOAR |
+| Scenario | Title | Surface | Block layer |
+|----------|-------|---------|-------------|
+| 1 | Code Compliance Illusion | AI-BOM / prompt drift | AIBOM telemetry |
+| 2 | Agentic Evaluation Harness | Orchestration | `orchestration_guard` |
+| 3 | Secure-by-Default Vibe Coding | Prompt / markup | `codeguard` |
+| 4 | Shadow AI at the Edge | Unapproved SLM | Asset discovery |
+| 5 | Guarding the Front Desk | Semantic jailbreak | `defenseclaw` |
+| 6 | Intern with the Master Key | MCP tools | `mcp_gateway` |
+| 7 | The Infinity Bill | Token recursion | `call_depth_detected` |
+| 8 | Identity Fracture | A2A DID | `a2a_verifier` |
+| 9 | The Invisible Leak | RAG exfil | `galileo_observe` |
+| 10 | Self-Healing SOC | Memory + rogue agent | `memory_policy` + SOAR |
 
 Full step-by-step: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.
 

@@ -16,7 +16,7 @@
 
 ### What it is
 
-The **OrchestraACME Workshop** is a hands-on security lab curriculum — not a slide deck. Learners operate a realistic **multi-agent loan-processing application** under attack, observe how **runtime controls** behave (block, allow, detect-only), and prove outcomes in **Splunk** using the same workflows they use in production SOC and detection engineering.
+The **OrchestraACME Workshop** is a hands-on security lab curriculum — live exercises in a running environment, not lecture-only training. Learners operate a realistic **multi-agent loan-processing application** under attack, observe how **runtime controls** behave (block, allow, detect-only), and prove outcomes in **Splunk** using the same workflows they use in production SOC and detection engineering.
 
 Two tools work together:
 
@@ -39,7 +39,7 @@ Most agentic-AI security training fails in predictable ways:
 |--------------|-----------------|---------------------------|
 | **Theory without telemetry** | Teams discuss MCP and RAG risks but never see `workflow.block_reason` in a SIEM | Every path emits searchable OTel fields you can hunt the same day |
 | **Prompt demos without surfaces** | Red teams test injection strings on a chatbot, not tool gateways or A2A trust chains | Ten scenarios map to **workflow surfaces** — tools, RAG, memory, A2A, orchestration, supply chain |
-| **Controls without evidence** | “We use guardrails” with no pass/fail per control or scenario | **Control Attestation** and NIST panels show PASS/FAIL tied to `campaign_week` |
+| **Controls without evidence** | “We use guardrails” with no pass/fail per control or scenario | **Control Attestation** and NIST panels show PASS/FAIL per scenario (1–10) |
 | **Detection without coverage math** | Ad hoc Splunk searches with no sense of MITRE breadth | **Technique Coverage Matrix** shows OBSERVED vs NOT_OBSERVED across 45 techniques |
 | **Architecture without validation** | Threat models sit in documents; nobody checks if telemetry would catch predicted failures | Optional **MAESTRO** path: model → attack → prove layer coverage in Splunk |
 | **Splunk training on synthetic logs** | Analysts learn SPL on stale canned data unrelated to GenAI | Hunts use **your lab’s live index** after **your** attacks — field names match emerging GenAI conventions |
@@ -84,7 +84,7 @@ Skills are mapped by role. You do not need every level; follow the [role quick-s
 | Skill | Workshop level | On-the-job use |
 |-------|----------------|----------------|
 | Confirm GenAI telemetry ingest | Level 0–1 | “Are we actually logging agent calls?” — first question on any AI incident |
-| Hunt by `campaign_week` / scenario | Level 1–2 | Map alerts to **which agent surface** failed (tools vs output vs retrieval) |
+| Hunt by scenario number | Level 1–2 | Map alerts to **which agent surface** failed (tools vs output vs retrieval) |
 | Read `workflow.blocked` and `workflow.block_reason` | Level 1, Q204 | Triage pre-LLM blocks vs model-reached events |
 | Read `defenseclaw.action` / `codeguard_blocked` | Level 1, Q102 | Distinguish output-side denials from input validation |
 | Field discovery on unfamiliar sourcetypes | Level 2, Q201–Q203 | Same muscle memory as BOTS — explore before you filter |
@@ -116,7 +116,7 @@ Skills are mapped by role. You do not need every level; follow the [role quick-s
 
 | Skill | Workshop level | On-the-job use |
 |-------|----------------|----------------|
-| Measure technique OBSERVED % | Level 4, Q401 | Defensible “MITRE ATLAS coverage for agents” metric in roadmap decks |
+| Measure technique OBSERVED % | Level 4, Q401 | Defensible “MITRE ATLAS coverage for agents” metric in security roadmaps |
 | Maintain NOT_OBSERVED backlog | Level 4, Q402 | Purple-team prioritization from evidence, not guesswork |
 | Design pre-LLM vs post-LLM detections | Level 1 | Rule placement: gateway block SPL ≠ output inspection SPL |
 | Token / cost anomaly patterns | Level 2 Q206, Level 4B | DoS and “infinity bill” class detections on `gen_ai.usage.*` |
@@ -152,7 +152,7 @@ Skills are mapped by role. You do not need every level; follow the [role quick-s
 |-------|----------------|----------------|
 | CSA MAESTRO 7-layer thinking | Level 5A | Structure agentic threat models (L1 foundation → L7 ecosystem) |
 | Predict → attack → prove loop | MAESTRO Validate | Close the gap between design docs and observable telemetry |
-| Map surfaces to OWASP LLM / ASI / NIST | Level 5, THREAT_SURFACES | Framework crosswalk in architecture decks |
+| Map surfaces to OWASP LLM / ASI / NIST | Level 5, THREAT_SURFACES | Framework crosswalk in architecture reviews |
 | Reason about non-determinism and autonomy | All levels | Design detections that survive model variance |
 | Multi-agent trust propagation | Level 3 + Scenario 8 | A2A identity, delegation chains, session binding |
 
@@ -169,7 +169,7 @@ Skills are mapped by role. You do not need every level; follow the [role quick-s
 | NIST AI RMF posture from live events | Level 5B, Q502–Q503 | Move from policy PDFs to `control.status` per scenario |
 | OWASP LLM risk categories observed | Level 5B | “Which LLM Top 10 categories generated telemetry this quarter?” |
 | MAESTRO layer risk coverage % | Level 5A, Q501 | Agentic-specific coverage metric for risk committees |
-| Scenario-to-control traceability | Fire All 10 + Control Attestation | `campaign_week=1..10` maps to attestation rows |
+| Scenario-to-control traceability | Fire All 10 + Control Attestation | Scenarios 1–10 map to attestation rows |
 | Explain detect-only vs block | Level 1, Scenario 9 | Defensible risk acceptance: monitor retrieval exfil without blocking every query |
 
 **Outcome:** You can **show auditors Splunk evidence** tied to named scenarios and frameworks — and explain *why* a detect-only control is intentional.
@@ -193,7 +193,7 @@ Skills are mapped by role. You do not need every level; follow the [role quick-s
 
 | Typical awareness session | OrchestraACME Workshop |
 |---------------------------|------------------------|
-| Slides on prompt injection | Live injection against Ollama with logged outcome |
+| Theory-only prompt injection training | Live injection against Ollama with logged outcome |
 | Generic “monitor your LLM” | Specific fields: `workflow.block_reason`, `technique_id`, `framework.maestro_layers` |
 | One demo video | 45 techniques + 5 kill chains you re-run locally |
 | Quiz on OWASP LLM Top 10 | Splunk panel showing which categories **fired** in your environment |
@@ -231,6 +231,8 @@ Level 5  Architecture & GRC    (architect + compliance, ~90 min)
 **Where to fire attacks:** Attack Panel → **// Workshop** (or individual scenario buttons).
 
 **Timing rule:** Wait **60 seconds** after each Attack Panel path before running SPL.
+
+> **Public terminology:** Use **Scenario 1–10** in workshops and customer-facing materials. Splunk events store the scenario index in field `campaign_week` (integer 1–10). SPL examples below use that field name; do not label it “campaign week” in narratives.
 
 ---
 
@@ -608,7 +610,7 @@ Discuss why detect-only may be correct for retrieval exfiltration.
 |---|----------|-------|
 | Q201 | What sourcetype/index holds agentic events? | Index discovery |
 | Q202 | Which agents appear in telemetry? | Field inventory |
-| Q203 | How many events per `campaign_week`? | Aggregation |
+| Q203 | How many events per scenario? | Aggregation |
 | Q204 | What blocked Scenario 6? | Workflow forensics |
 | Q205 | Which MITRE technique IDs fired? | Framework fields |
 | Q206 | Token usage for Scenario 7 | Cost / DoS hunting |
@@ -643,7 +645,7 @@ index=acme_agentic_telemetry earliest=-1h
 </details>
 
 <details>
-<summary><strong>Q203</strong> — Event count per campaign week after First Win.</summary>
+<summary><strong>Q203</strong> — Event count per scenario after First Win.</summary>
 
 ```spl
 `acme_genai_index` earliest=-30m
@@ -742,7 +744,7 @@ If empty, complete Level 3 first.
 
 | Concept | Field | Dashboard |
 |---------|-------|-----------|
-| Single-surface attack | `campaign_week`, `trace_id` | Control Attestation |
+| Single-surface attack | scenario index (`campaign_week`), `trace_id` | Control Attestation |
 | Multi-stage story | `incident_id` | Actor Chain Story |
 | Timeline | `_time`, `kill_chain.stage` | Kill-Chain Timeline |
 

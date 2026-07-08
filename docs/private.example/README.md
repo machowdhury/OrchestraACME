@@ -15,12 +15,16 @@ mkdir -p docs/private
 | `docs/private/BLOG_USAGE_GUIDE.md` | 10-week campaign workflow, blog Splunk demos |
 | `docs/private/BLOG_WRITER_PROMPTS.md` | Claude prompts for Track 1 + Track 2 posts |
 | `docs/private/EMERGING_THREATS.md` | Threat classes mapped to campaign weeks (blog spine) |
+| `docs/private/BLOG_LAB_ALIGNMENT.md` | 10-week blog ↔ lab mapping (copy from `private.example/BLOG_LAB_ALIGNMENT.md`) |
 
 If you cloned before the split, copy content from git history or recreate from your backup:
 
 ```bash
 # Optional: recover old public USAGE_GUIDE from history
 git show HEAD~1:docs/USAGE_GUIDE.md > docs/private/BLOG_USAGE_GUIDE.md
+
+# Blog ↔ lab alignment (internal)
+cp docs/private.example/BLOG_LAB_ALIGNMENT.md docs/private/BLOG_LAB_ALIGNMENT.md
 ```
 
 ## Public documentation (published on GitHub)
@@ -28,7 +32,7 @@ git show HEAD~1:docs/USAGE_GUIDE.md > docs/private/BLOG_USAGE_GUIDE.md
 | File | Audience |
 |------|----------|
 | [docs/USER_GUIDE.md](../USER_GUIDE.md) | All users — exploits, hunts, Splunk dashboards |
-| [docs/THREAT_SURFACES.md](../THREAT_SURFACES.md) | Threat surface reference (no campaign/blog mapping) |
+| [docs/THREAT_SURFACES.md](../THREAT_SURFACES.md) | Threat surface reference |
 | [docs/CISCO_INTEGRATION.md](../CISCO_INTEGRATION.md) | Cisco AI Defense + MLTK overlay |
-| [docs/BLOG_LAB_ALIGNMENT.md](../BLOG_LAB_ALIGNMENT.md) | 10-week blog ↔ lab mapping (public) |
+| [docs/WORKSHOP.md](../WORKSHOP.md) | Public workshop curriculum (Scenario 1–10) |
 | [README.md](../README.md) | Architecture and install |
