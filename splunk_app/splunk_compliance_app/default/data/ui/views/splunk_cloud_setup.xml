@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dashboard version="1.1" theme="dark">
+  <label>Splunk Cloud &amp; External Setup Guide</label>
+  <description>Step-by-step instructions for installing this app on Splunk Cloud or Splunk Enterprise when OrchestraACME runs without the local Splunk container.</description>
+
+  <row>
+    <panel>
+      <html>
+        <![CDATA[
+        <div style="font-family:Segoe UI,Arial,sans-serif;color:#e8e8e8;padding:12px;line-height:1.6;">
+          <h2 style="color:#4fc3f7;margin-top:0;">OrchestraACME → Splunk Cloud Installation</h2>
+          <p>Use this guide when your telemetry lands in <strong>Splunk Cloud</strong> or an external <strong>Splunk Enterprise</strong> instance instead of the local Docker Splunk container.</p>
+
+          <h3 style="color:#81c784;">Step 1 — Package &amp; Install This App</h3>
+          <ol>
+            <li>On your OrchestraACME host, build the install package:<br/>
+              <code style="background:#1a1a2e;padding:4px 8px;border-radius:4px;">./scripts/package_splunk_app.sh</code></li>
+            <li>Download <code>dist/acme_genai_compliance-2.0.0.tar.gz</code></li>
+            <li>In Splunk Cloud: <strong>Apps → Browse more apps → Upload app</strong> (or ask your Splunk Cloud admin)</li>
+            <li>In Splunk Enterprise: <strong>Apps → Manage Apps → Install app from file</strong></li>
+          </ol>
+
+          <h3 style="color:#81c784;">Step 2 — Create Index &amp; HEC Token (Splunk Cloud Admin)</h3>
+          <ol>
+            <li><strong>Settings → Indexes → New Index</strong><br/>
+              Name: <code>acme_agentic_telemetry</code> (or your preferred name)</li>
+            <li><strong>Settings → Data Inputs → HTTP Event Collector → New Token</strong>
+              <ul>
+                <li>Name: <code>orchestra-acme-otel</code></li>
+                <li>Source type: <code>otel:agentic:json</code></li>
+                <li>Index: <code>acme_agentic_telemetry</code></li>
+              </ul>
+            </li>
+            <li>Copy the HEC token and your Cloud endpoint URL<br/>
+              Format: <code>https://http-inputs-&lt;stack&gt;.splunkcloud.com:443/services/collector/event</code></li>
+          </ol>
+
+          <h3 style="color:#81c784;">Step 3 — Point OrchestraACME OTel Collector at Splunk Cloud</h3>
+          <p>Edit <code>.env</code> on the OrchestraACME Docker host:</p>
+          <pre style="background:#0d1117;padding:12px;border-radius:6px;overflow-x:auto;">
+SPLUNK_MODE=external
+SPLUNK_HEC_ENDPOINT=https://http-inputs-YOUR_STACK.splunkcloud.com/services/collector/event
+SPLUNK_HEC_TOKEN=YOUR_SPLUNK_CLOUD_HEC_TOKEN
+SPLUNK_HEC_INDEX=acme_agentic_telemetry
+SPLUNK_HEC_SOURCETYPE=otel:agentic:json
+SPLUNK_HEC_TLS_SKIP_VERIFY=false
+          </pre>
+          <p>Restart without the local Splunk container:</p>
+          <pre style="background:#0d1117;padding:12px;border-radius:6px;">
+docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d
+          </pre>
+
+          <h3 style="color:#81c784;">Step 4 — Configure App Macros (if using a custom index)</h3>
+          <p>If your index or sourcetype differs from defaults, edit:</p>
+          <pre style="background:#0d1117;padding:12px;border-radius:6px;">
+Settings → Advanced Search → Search macros → acme_genai_index
+          </pre>
+          <p>Default definition:</p>
+          <pre style="background:#0d1117;padding:12px;border-radius:6px;">
+index=acme_agentic_telemetry sourcetype="otel:agentic:json"
+          </pre>
+
+          <h3 style="color:#81c784;">Step 5 — Verify Ingestion</h3>
+          <pre style="background:#0d1117;padding:12px;border-radius:6px;">
+index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20
+          </pre>
+
+          <h3 style="color:#ffb74d;">Optional — Machine Learning Toolkit</h3>
+          <p>Install <strong>Splunk Machine Learning Toolkit</strong> from Splunkbase for advanced forecasting panels. Core compliance dashboards work without MLTK.</p>
+
+          <h3 style="color:#ffb74d;">Splunk Cloud Notes</h3>
+          <ul>
+            <li>Private apps must be approved by your Splunk Cloud admin.</li>
+            <li>HEC tokens require the <em>hec</em> capability on the token or role.</li>
+            <li>Index creation requires admin privileges on Splunk Cloud.</li>
+            <li>This app does <strong>not</strong> require a local Splunk container — only HEC ingest + app install.</li>
+          </ul>
+        </div>
+        ]]>
+      </html>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Ingestion Health Check</title>
+      <single>
+        <search>
+          <query>`acme_genai_index` | stats count as events</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0xdc4e41","0xf8be34","0x53a051"]</option>
+        <option name="rangeValues">[0,1,10]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>DefenseClaw HARD_DENY Events (24h)</title>
+      <single>
+        <search>
+          <query>`acme_genai_index` defenseclaw.action=HARD_DENY OR defenseclaw_blocked=true | stats count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="useColors">0</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Latest Event Timestamp</title>
+      <table>
+        <search>
+          <query>`acme_genai_index` | stats max(_time) as latest_epoch | eval latest=strftime(latest_epoch, "%Y-%m-%d %H:%M:%S") | table latest</query>
+          <earliest>-7d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">1</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

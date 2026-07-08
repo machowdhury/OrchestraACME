@@ -26,6 +26,7 @@ Thumbs.db
 
 prevbuild/
 *.tar.gz
+dist/
 secrets/
 *.pem
 *.key

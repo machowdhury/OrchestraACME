@@ -368,12 +368,19 @@ Expected state: all services `running` / `healthy`.
 
 ### Step 5 — Install the Splunk compliance app
 
-```bash
-docker cp splunk_app/splunk_compliance_app acme_splunk:/opt/splunk/etc/apps/
+**Option A — Local Docker (package install):**
 
-docker compose exec splunk bash -c \
-  "chown -R splunk:splunk /opt/splunk/etc/apps/splunk_compliance_app && /opt/splunk/bin/splunk restart"
+```bash
+./scripts/package_splunk_app.sh
+docker cp dist/acme_genai_compliance-2.0.0.tar.gz acme_splunk:/tmp/
+docker compose exec splunk /opt/splunk/bin/splunk install app \
+  /tmp/acme_genai_compliance-2.0.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+docker compose exec splunk /opt/splunk/bin/splunk restart
 ```
+
+**Option B — Splunk Cloud / Enterprise (no local Splunk):**
+
+See **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)** — build the package, upload to Splunk Cloud, configure HEC, then run OrchestraACME in external mode.
 
 Create the telemetry index in Splunk Web: **Settings → Indexes → New Index** → `acme_agentic_telemetry`
 
@@ -480,6 +487,38 @@ Navigate in Splunk Web: **GenAI Compliance Monitor**
 ---
 
 ## Splunk App Deployment
+
+Full installation guide: **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)**
+
+### Deployment Modes
+
+| Mode | Splunk | OrchestraACME Command |
+|------|--------|----------------------|
+| **Local lab** | Docker Splunk container | `docker compose --profile local up --build -d` |
+| **Splunk Cloud** | Your Cloud stack | `docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d` |
+| **Splunk Enterprise** | On-prem instance | Same as Splunk Cloud (external mode) |
+
+### Build Install Package (Splunk Cloud / Enterprise)
+
+```bash
+chmod +x scripts/package_splunk_app.sh
+./scripts/package_splunk_app.sh
+# Output: dist/acme_genai_compliance-2.0.0.tar.gz
+```
+
+**Splunk Cloud:** Apps → Upload app → select the `.tar.gz`  
+**Splunk Enterprise:** `$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.0.0.tar.gz`
+
+After install, open **GenAI Compliance Monitor → Setup Guide** for HEC configuration and health checks.
+
+### Splunk Cloud Quick Setup
+
+1. **Install app** — upload `dist/acme_genai_compliance-2.0.0.tar.gz`
+2. **Create index** — `acme_agentic_telemetry`
+3. **Create HEC token** — sourcetype `otel:agentic:json`, index `acme_agentic_telemetry`
+4. **Configure OrchestraACME `.env`** — set `SPLUNK_MODE=external` and your Cloud HEC URL/token
+5. **Start external stack** — `docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d`
+6. **Verify** — `index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20`
 
 ### HEC Token Alignment
 

@@ -1,0 +1,200 @@
+# OrchestraACME Splunk App Installation Guide
+
+This guide covers installing the **GenAI Compliance Monitor** app (`acme_genai_compliance`) in three deployment modes.
+
+| Mode | Splunk Location | OrchestraACME Stack |
+|------|-----------------|---------------------|
+| **Local Lab** | Docker Splunk container | `docker compose --profile local up` |
+| **Splunk Cloud** | Your Splunk Cloud stack | `docker compose -f docker-compose.yml -f docker-compose.external.yml up` |
+| **Splunk Enterprise** | On-prem / VM Splunk | Same as Splunk Cloud (external mode) |
+
+---
+
+## 1. Build the Install Package
+
+From the OrchestraACME repository root:
+
+```bash
+chmod +x scripts/package_splunk_app.sh
+./scripts/package_splunk_app.sh
+```
+
+This creates:
+
+```
+dist/acme_genai_compliance-2.0.0.tar.gz
+```
+
+The tarball uses the correct Splunk app folder name (`acme_genai_compliance`) required for Cloud and Enterprise installation.
+
+---
+
+## 2. Splunk Cloud Installation
+
+### Prerequisites
+
+- Splunk Cloud admin or app-install privileges
+- Permission to create indexes and HEC tokens (or admin assistance)
+- OrchestraACME OTel Collector configured to ship to Splunk Cloud HEC
+
+### Step A — Install the App
+
+1. Log in to your Splunk Cloud instance
+2. Navigate to **Apps → Browse more apps → Upload app**
+3. Upload `dist/acme_genai_compliance-2.0.0.tar.gz`
+4. If prompted, request **private app approval** from your Splunk Cloud administrator
+
+> **Alternative (admin CLI on SHC):**
+> ```bash
+> splunk install app acme_genai_compliance-2.0.0.tar.gz -update 1 -auth admin:<password>
+> ```
+
+### Step B — Create Index
+
+1. **Settings → Indexes → New Index**
+2. Name: `acme_agentic_telemetry`
+3. Save
+
+### Step C — Create HEC Token
+
+1. **Settings → Data Inputs → HTTP Event Collector → Global Settings** → Enable
+2. **New Token**
+   - Name: `orchestra-acme-otel`
+   - Source type: `otel:agentic:json`
+   - Index: `acme_agentic_telemetry`
+3. Copy the token value
+
+### Step D — Note Your HEC Endpoint
+
+Splunk Cloud HEC URL format:
+
+```
+https://http-inputs-<YOUR_STACK>.splunkcloud.com/services/collector/event
+```
+
+Find the exact URL in **Settings → Data Inputs → HTTP Event Collector**.
+
+### Step E — Configure OrchestraACME (External Mode)
+
+On your OrchestraACME Docker host, edit `.env`:
+
+```bash
+SPLUNK_MODE=external
+SPLUNK_HEC_ENDPOINT=https://http-inputs-YOUR_STACK.splunkcloud.com/services/collector/event
+SPLUNK_HEC_TOKEN=<your-splunk-cloud-hec-token>
+SPLUNK_HEC_INDEX=acme_agentic_telemetry
+SPLUNK_HEC_SOURCETYPE=otel:agentic:json
+SPLUNK_HEC_TLS_SKIP_VERIFY=false
+```
+
+Start without the local Splunk container:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d
+```
+
+### Step F — Verify & Open Dashboards
+
+Run in Splunk Cloud Search:
+
+```spl
+index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20
+```
+
+Open the in-app setup guide:
+
+**GenAI Compliance Monitor → Setup Guide**
+
+---
+
+## 3. Splunk Enterprise (External) Installation
+
+Follow the same steps as Splunk Cloud (Section 2), replacing the HEC endpoint with your Enterprise host:
+
+```bash
+SPLUNK_HEC_ENDPOINT=https://<your-splunk-host>:8088/services/collector/event
+```
+
+Install the app via UI or CLI:
+
+```bash
+$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.0.0.tar.gz -update 1
+$SPLUNK_HOME/bin/splunk restart
+```
+
+---
+
+## 4. Local Docker Splunk Installation
+
+When using the bundled Splunk container:
+
+```bash
+# Build package (optional — can also copy source folder directly)
+./scripts/package_splunk_app.sh
+
+# Install into running container
+docker cp dist/acme_genai_compliance-2.0.0.tar.gz acme_splunk:/tmp/
+docker compose exec splunk /opt/splunk/bin/splunk install app \
+  /tmp/acme_genai_compliance-2.0.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+docker compose exec splunk /opt/splunk/bin/splunk restart
+```
+
+Or copy the source directory:
+
+```bash
+docker cp splunk_app/splunk_compliance_app acme_splunk:/opt/splunk/etc/apps/acme_genai_compliance
+docker compose exec splunk bash -c "chown -R splunk:splunk /opt/splunk/etc/apps/acme_genai_compliance && /opt/splunk/bin/splunk restart"
+```
+
+Enable HEC and create index as documented in the main `README.md`.
+
+---
+
+## 5. Custom Index / Sourcetype
+
+If your environment uses different names, edit the app macro (no code changes required):
+
+**Settings → Advanced Search → Search macros → `acme_genai_index`**
+
+Default:
+
+```spl
+index=acme_agentic_telemetry sourcetype="otel:agentic:json"
+```
+
+All dashboards and saved searches inherit this macro automatically.
+
+---
+
+## 6. Optional: Legacy Cisco AI Defense App
+
+For `cisco:aidefense:json` sourcetype (legacy OrchestraACME telemetry), install separately:
+
+```
+splunk_app/App-Agentic-Compliance/
+```
+
+Package manually:
+
+```bash
+tar -czf dist/app-agentic-compliance-1.0.0.tar.gz -C splunk_app/App-Agentic-Compliance .
+```
+
+---
+
+## 7. Troubleshooting
+
+| Issue | Resolution |
+|-------|------------|
+| App upload rejected on Splunk Cloud | Request private app install from Splunk support/admin |
+| No data in dashboards | Verify `acme_genai_index` macro matches your index/sourcetype |
+| HEC 403 errors | Token index/sourcetype permissions; verify token is active |
+| Fields not extracted | Confirm sourcetype is `otel:agentic:json`; check `default/props.conf` loaded |
+| MLTK panels empty | Install Machine Learning Toolkit from Splunkbase (optional) |
+
+---
+
+## Support
+
+- Repository: https://github.com/machowdhury/OrchestraACME
+- In-app guide: **GenAI Compliance Monitor → Setup Guide**
