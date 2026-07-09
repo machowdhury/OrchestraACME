@@ -131,12 +131,25 @@ $SPLUNK_HOME/bin/splunk restart
 When using the bundled Splunk container:
 
 ```bash
-# Recommended — installs as splunk user (avoids Permission denied errors)
+# Recommended — packages, repairs permissions, copies into etc/apps
 chmod +x scripts/splunk_install_app.sh
 ./scripts/splunk_install_app.sh
 ```
 
-Or manually (must use `-u splunk`):
+This avoids `splunk install app` tarball extraction issues (`bundle_tmp` errors) common when the CLI was previously run as root.
+
+Or manually:
+
+```bash
+./scripts/package_splunk_app.sh
+tar -xzf dist/acme_genai_compliance-2.4.0.tar.gz -C /tmp
+docker exec -u root acme_splunk rm -rf /opt/splunk/etc/apps/acme_genai_compliance
+docker cp /tmp/acme_genai_compliance acme_splunk:/opt/splunk/etc/apps/acme_genai_compliance
+docker exec -u root acme_splunk chown -R splunk:splunk /opt/splunk/etc/apps/acme_genai_compliance
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk restart
+```
+
+Legacy tarball install (only if `bundle_tmp` permissions are correct):
 
 ```bash
 ./scripts/package_splunk_app.sh
@@ -223,7 +236,7 @@ See **[splunk_app/CLOUD_VETTING.md](CLOUD_VETTING.md)** for the full checklist a
 | No data in dashboards | Verify `acme_genai_index` macro matches your index/sourcetype |
 | HEC 403 errors | Token index/sourcetype permissions; verify token is active |
 | Bootstrap Permission denied on `/opt/splunk` | Re-run after `git pull` — bootstrap uses REST API, not `splunk` CLI as root |
-| App install Permission denied on `/opt/splunk` | Use `./scripts/splunk_install_app.sh` or `docker compose exec -u splunk splunk ...` |
+| App install `bundle_tmp` / Permission denied | Prior root `splunk` CLI | `./scripts/splunk_install_app.sh` (repairs ownership + copies to `etc/apps`) |
 | Fields not extracted | Confirm sourcetype is `otel:agentic:json`; check `default/props.conf` loaded |
 | MLTK panels empty | Install Machine Learning Toolkit from Splunkbase (optional) |
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # OrchestraACME — Install GenAI Compliance Splunk app into local Docker Splunk
-# Runs splunk CLI as the splunk user (not root) to avoid permission errors.
+# Copies app into /opt/splunk/etc/apps (reliable in containers). Repairs
+# ownership if splunk CLI was previously run as root.
 # =============================================================================
 set -euo pipefail
 
@@ -17,8 +18,10 @@ fi
 
 SPLUNK_PASSWORD="${SPLUNK_PASSWORD:-ACMEPassword2026!}"
 SPLUNK_CONTAINER="${SPLUNK_CONTAINER:-acme_splunk}"
+APP_ID="${SPLUNK_APP_ID:-acme_genai_compliance}"
 SPLUNK_BIN="/opt/splunk/bin/splunk"
 AUTH="admin:${SPLUNK_PASSWORD}"
+APPS_DIR="/opt/splunk/etc/apps/${APP_ID}"
 
 # Optional arg: path to tarball; otherwise package latest
 TARBALL="${1:-}"
@@ -35,9 +38,6 @@ if [[ ! -f "$TARBALL" ]]; then
   exit 1
 fi
 
-BASENAME="$(basename "$TARBALL")"
-REMOTE="/tmp/${BASENAME}"
-
 echo "[install] Waiting for Splunk (${SPLUNK_CONTAINER})..."
 for i in $(seq 1 60); do
   if docker exec "$SPLUNK_CONTAINER" curl -sfk -u "$AUTH" \
@@ -51,12 +51,28 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-echo "[install] Copying ${BASENAME} into container..."
-docker cp "$TARBALL" "${SPLUNK_CONTAINER}:${REMOTE}"
+echo "[install] Repairing Splunk filesystem ownership (fixes prior root CLI runs)..."
+docker exec -u root "$SPLUNK_CONTAINER" bash -c "
+  mkdir -p /opt/splunk/var/run/splunk/bundle_tmp
+  mkdir -p /opt/splunk/var/log/splunk /opt/splunk/var/log/introspection
+  mkdir -p /opt/splunk/var/log/watchdog /opt/splunk/var/log/client_events
+  chown -R splunk:splunk /opt/splunk/etc /opt/splunk/var
+"
 
-echo "[install] Installing app as splunk user..."
-docker exec -u splunk "$SPLUNK_CONTAINER" "$SPLUNK_BIN" install app \
-  "$REMOTE" -update 1 -auth "$AUTH"
+STAGING="$(mktemp -d)"
+trap 'rm -rf "${STAGING}"' EXIT
+
+echo "[install] Extracting $(basename "$TARBALL")..."
+tar -xzf "$TARBALL" -C "$STAGING"
+if [[ ! -d "${STAGING}/${APP_ID}" ]]; then
+  echo "[install] ERROR: expected folder '${APP_ID}/' inside tarball" >&2
+  exit 1
+fi
+
+echo "[install] Deploying to ${APPS_DIR}..."
+docker exec -u root "$SPLUNK_CONTAINER" rm -rf "${APPS_DIR}"
+docker cp "${STAGING}/${APP_ID}" "${SPLUNK_CONTAINER}:${APPS_DIR}"
+docker exec -u root "$SPLUNK_CONTAINER" chown -R splunk:splunk "${APPS_DIR}"
 
 echo "[install] Restarting Splunk..."
 docker exec -u splunk "$SPLUNK_CONTAINER" "$SPLUNK_BIN" restart

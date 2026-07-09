@@ -561,7 +561,7 @@ Next: [Level 1 — Pipeline proof](#level-1--pipeline-proof-everyone) (**▶ RUN
 | Bootstrap `Permission denied` on `/opt/splunk/...` | Splunk CLI run as root | `./scripts/splunk_local_bootstrap.sh` (REST) or `./scripts/splunk_install_app.sh` (`-u splunk`) |
 | Browser can’t open `:5001` on cloud VM | Firewall | Open ports per [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
 | `permission denied` on scripts | Script not executable | `chmod +x scripts/*.sh` |
-| Splunk app install Permission denied | CLI run as root | `./scripts/splunk_install_app.sh` or add `-u splunk` to `docker compose exec` |
+| Splunk app install `bundle_tmp` error | Root-owned paths in container | `./scripts/splunk_install_app.sh` after `git pull` |
 | Everything slow | Not enough RAM | Close other apps; use machine with 16+ GB RAM |
 
 **Still stuck?** Collect for your facilitator: output of `docker compose ps`, screenshot of Attack Panel header, and screenshot of Splunk Overview.
