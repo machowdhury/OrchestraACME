@@ -131,21 +131,27 @@ $SPLUNK_HOME/bin/splunk restart
 When using the bundled Splunk container:
 
 ```bash
-# Build package (optional — can also copy source folder directly)
-./scripts/package_splunk_app.sh
+# Recommended — installs as splunk user (avoids Permission denied errors)
+chmod +x scripts/splunk_install_app.sh
+./scripts/splunk_install_app.sh
+```
 
-# Install into running container
+Or manually (must use `-u splunk`):
+
+```bash
+./scripts/package_splunk_app.sh
 docker cp dist/acme_genai_compliance-2.4.0.tar.gz acme_splunk:/tmp/
-docker compose exec splunk /opt/splunk/bin/splunk install app \
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk install app \
   /tmp/acme_genai_compliance-2.4.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
-docker compose exec splunk /opt/splunk/bin/splunk restart
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk restart
 ```
 
 Or copy the source directory:
 
 ```bash
 docker cp splunk_app/splunk_compliance_app acme_splunk:/opt/splunk/etc/apps/acme_genai_compliance
-docker compose exec splunk bash -c "chown -R splunk:splunk /opt/splunk/etc/apps/acme_genai_compliance && /opt/splunk/bin/splunk restart"
+docker compose exec -u root splunk bash -c "chown -R splunk:splunk /opt/splunk/etc/apps/acme_genai_compliance"
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk restart
 ```
 
 Enable HEC and create index:
@@ -217,6 +223,7 @@ See **[splunk_app/CLOUD_VETTING.md](CLOUD_VETTING.md)** for the full checklist a
 | No data in dashboards | Verify `acme_genai_index` macro matches your index/sourcetype |
 | HEC 403 errors | Token index/sourcetype permissions; verify token is active |
 | Bootstrap Permission denied on `/opt/splunk` | Re-run after `git pull` — bootstrap uses REST API, not `splunk` CLI as root |
+| App install Permission denied on `/opt/splunk` | Use `./scripts/splunk_install_app.sh` or `docker compose exec -u splunk splunk ...` |
 | Fields not extracted | Confirm sourcetype is `otel:agentic:json`; check `default/props.conf` loaded |
 | MLTK panels empty | Install Machine Learning Toolkit from Splunkbase (optional) |
 

@@ -401,10 +401,17 @@ You should also see tabs such as **// Workshop** and **// Top 10 Scenarios**. St
 2. Copy the app into Splunk and install it:
 
    ```bash
+   chmod +x scripts/splunk_install_app.sh
+   ./scripts/splunk_install_app.sh
+   ```
+
+   Or manually with `-u splunk`:
+
+   ```bash
    docker cp dist/acme_genai_compliance-2.4.0.tar.gz acme_splunk:/tmp/
-   docker compose exec splunk /opt/splunk/bin/splunk install app \
+   docker compose exec -u splunk splunk /opt/splunk/bin/splunk install app \
      /tmp/acme_genai_compliance-2.4.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
-   docker compose exec splunk /opt/splunk/bin/splunk restart
+   docker compose exec -u splunk splunk /opt/splunk/bin/splunk restart
    ```
 
    When prompted about the certificate or restart, accept defaults. Splunk restarts in **1–3 minutes**.
@@ -551,9 +558,10 @@ Next: [Level 1 — Pipeline proof](#level-1--pipeline-proof-everyone) (**▶ RUN
 | Splunk **Overview** shows 0 events | HEC not configured or too soon | Run `./scripts/splunk_local_bootstrap.sh`; wait 60s after Step 0.5 |
 | OTel logs `connection reset by peer` on 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
 | OTel logs `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script fixes this; `docker compose restart otel_collector` |
-| Bootstrap `Permission denied` on `/opt/splunk/...` | Old bootstrap used Splunk CLI as root | `git pull` and re-run `./scripts/splunk_local_bootstrap.sh` |
+| Bootstrap `Permission denied` on `/opt/splunk/...` | Splunk CLI run as root | `./scripts/splunk_local_bootstrap.sh` (REST) or `./scripts/splunk_install_app.sh` (`-u splunk`) |
 | Browser can’t open `:5001` on cloud VM | Firewall | Open ports per [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
-| `permission denied` on scripts | Script not executable | `chmod +x scripts/package_splunk_app.sh` |
+| `permission denied` on scripts | Script not executable | `chmod +x scripts/*.sh` |
+| Splunk app install Permission denied | CLI run as root | `./scripts/splunk_install_app.sh` or add `-u splunk` to `docker compose exec` |
 | Everything slow | Not enough RAM | Close other apps; use machine with 16+ GB RAM |
 
 **Still stuck?** Collect for your facilitator: output of `docker compose ps`, screenshot of Attack Panel header, and screenshot of Splunk Overview.

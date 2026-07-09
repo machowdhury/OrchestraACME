@@ -125,6 +125,6 @@ fi
 
 echo ""
 echo "[bootstrap] Next steps:"
-echo "  1. Install compliance app: ./scripts/package_splunk_app.sh && see splunk_app/INSTALL.md §4"
+echo "  1. Install compliance app: ./scripts/splunk_install_app.sh"
 echo "  2. Splunk Search: index=${HEC_INDEX} earliest=-15m | stats count"
 echo "  3. Open http://localhost:8000 (admin / password from .env)"

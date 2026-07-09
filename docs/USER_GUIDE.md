@@ -32,7 +32,7 @@ Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firin
 **Splunk quick checklist** (do once after `docker compose up`):
 
 1. `./scripts/splunk_local_bootstrap.sh` — enables HEC, creates index `acme_agentic_telemetry`, creates token matching `.env`
-2. `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-*.tar.gz` (version in filename)
+2. `./scripts/splunk_install_app.sh` — packages and installs the compliance app (runs as `splunk` user)
 3. Verify: `` index=acme_agentic_telemetry earliest=-15m | stats count ``
 
 ---
@@ -297,7 +297,7 @@ If Search has data but dashboards are empty, edit macro **`acme_genai_index`** t
 ## GenAI Compliance Monitor — dashboard & visualization guide
 
 **App name in Splunk:** GenAI Compliance Monitor (`acme_genai_compliance` v2.3+)  
-**Install:** `./scripts/package_splunk_app.sh` → `dist/acme_genai_compliance-2.3.0.tar.gz`  
+**Install:** `./scripts/splunk_install_app.sh` (local Docker) or `./scripts/package_splunk_app.sh` → upload to Splunk Cloud  
 **Validate (Cloud/Enterprise):** `./scripts/validate_splunk_app.sh` — see [splunk_app/CLOUD_VETTING.md](../splunk_app/CLOUD_VETTING.md)
 
 All dashboards read `` `acme_genai_index` `` (default: `index=acme_agentic_telemetry sourcetype="otel:agentic:json"`). Empty panels mean no telemetry yet — run a Workshop path first.

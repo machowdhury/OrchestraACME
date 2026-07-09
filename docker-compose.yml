@@ -1,5 +1,3 @@
-version: "3.9"
-
 # =============================================================================
 # OrchestraACME — Live AI Security Range
 # 5-service mesh: banking_app | attack_panel | otel_collector | ollama | splunk

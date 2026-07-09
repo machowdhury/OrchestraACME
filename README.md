@@ -746,15 +746,22 @@ Expected state: all services `running` / `healthy`.
 
 > **Prerequisite:** Step 2 bootstrap (`./scripts/splunk_local_bootstrap.sh`) must have run so HEC and index exist. This step adds dashboards.
 
-**Option A — Local Docker (package install):**
+**Option A — Local Docker (recommended):**
+
+```bash
+chmod +x scripts/splunk_install_app.sh
+./scripts/splunk_install_app.sh
+```
+
+Manual install (must use `-u splunk`):
 
 ```bash
 ./scripts/package_splunk_app.sh
 # Replace VERSION with the file under dist/ (e.g. 2.4.0)
 docker cp dist/acme_genai_compliance-VERSION.tar.gz acme_splunk:/tmp/
-docker compose exec splunk /opt/splunk/bin/splunk install app \
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk install app \
   /tmp/acme_genai_compliance-VERSION.tar.gz -update 1 -auth admin:ACMEPassword2026!
-docker compose exec splunk /opt/splunk/bin/splunk restart
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk restart
 ```
 
 **Option B — Splunk Cloud / Enterprise (no local Splunk):**
@@ -770,7 +777,7 @@ In Splunk Web → **Apps** → **Find More Apps** → search **Machine Learning 
 Or via CLI inside the Splunk container:
 
 ```bash
-docker compose exec splunk /opt/splunk/bin/splunk install app Splunk_ML_Toolkit -update 1 -auth admin:ACMEPassword2026!
+docker compose exec -u splunk splunk /opt/splunk/bin/splunk install app Splunk_ML_Toolkit -update 1 -auth admin:ACMEPassword2026!
 ```
 
 ### Post-install checklist (do not skip)
@@ -914,7 +921,7 @@ After install, open **GenAI Compliance Monitor → Setup Guide** for health chec
 
 1. **Start stack** — `docker compose --profile local up --build -d`
 2. **Bootstrap HEC** — `./scripts/splunk_local_bootstrap.sh`
-3. **Install app** — `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-*.tar.gz` into `acme_splunk`
+3. **Install app** — `./scripts/splunk_install_app.sh`
 4. **Verify** — `index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20`
 
 ### Splunk Cloud Quick Setup

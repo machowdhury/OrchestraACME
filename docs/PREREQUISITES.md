@@ -211,8 +211,8 @@ This enables HEC, creates index `acme_agentic_telemetry`, creates a token matchi
 | Step | Action | Doc |
 |------|--------|-----|
 | 0 | **HEC + index** (local Docker) | `./scripts/splunk_local_bootstrap.sh` |
-| 1 | Package app | `./scripts/package_splunk_app.sh` |
-| 2 | Install `dist/acme_genai_compliance-*.tar.gz` | Splunk **Apps → Upload** |
+| 1 | Install compliance app (local Docker) | `./scripts/splunk_install_app.sh` |
+| 2 | Package only (Cloud/Enterprise upload) | `./scripts/package_splunk_app.sh` |
 | 3 | Create index `acme_agentic_telemetry` | *(skip if bootstrap ran)* |
 | 4 | Create HEC token matching `.env` | *(skip if bootstrap ran)* |
 | 5 | Verify ingest | `` index=acme_agentic_telemetry earliest=-15m \| stats count `` |
@@ -283,7 +283,7 @@ Expect `BASELINE_TRAFFIC` after a few minutes even if you have not attacked yet.
 | Splunk dashboards empty | App/index/HEC not configured | Run `./scripts/splunk_local_bootstrap.sh` then [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
 | No events in Splunk Search | HEC token mismatch | `.env` `SPLUNK_HEC_TOKEN` must match Splunk token; run bootstrap script |
 | `connection reset by peer` on port 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
-| Bootstrap `Permission denied` on Splunk paths | Old script used `splunk` CLI as root | `git pull` and re-run bootstrap (REST API fix) |
+| Bootstrap `Permission denied` on Splunk paths | Splunk CLI run as root | Use `./scripts/splunk_local_bootstrap.sh` (REST API) and `./scripts/splunk_install_app.sh` (`-u splunk`) |
 | `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script `chmod 1777` on `/var/log/defenseclaw`; restart otel |
 | `permission denied` on scripts | Scripts not executable | `chmod +x scripts/*.sh` |
 | Out of disk | Model + Splunk growth | `df -h`; expand volume or `docker system prune` |
