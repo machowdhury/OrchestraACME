@@ -267,6 +267,7 @@ Expect `BASELINE_TRAFFIC` after a few minutes even if you have not attacked yet.
 | `permission denied` on `docker.sock` | User not in `docker` group | [Docker group fix](#fix-permission-denied-on-dockersock) |
 | `docker: command not found` | Docker not installed | [Install Docker](#install-docker-ubuntu--cloud-vm) |
 | `LLM OFFLINE` on Attack Panel | Ollama still pulling model / init timeout | `docker compose logs -f ollama`; wait up to 15 min on first boot; see [Ollama unhealthy](#ollama-unhealthy--did-not-start-within-120s) |
+| `acme_otel_collector` shows **unhealthy** | Old compose healthcheck used `wget` (not in distroless image) | `git pull` and `docker compose up -d` — collector works; status label fixed in latest compose |
 | `acme_ollama is unhealthy` | Init healthcheck failed (often missing `curl` or low RAM) | Pull latest repo; `docker compose up --build -d`; ensure **≥ 8 GB** host RAM (16 GB for Pattern A) |
 | `TARGET OFFLINE` | Banking container down | `docker compose ps`; `docker compose logs banking_app` |
 | Splunk dashboards empty | App/index/HEC not configured | [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
