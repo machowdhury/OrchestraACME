@@ -92,6 +92,7 @@ Workshop paths are **one-click sequences** (First Win, Standard, Deep, Fire All 
 
 | Doc | Use when you need… |
 |-----|-------------------|
+| [docs/PREREQUISITES.md](docs/PREREQUISITES.md) | Full install checklist — Docker, permissions, Splunk, verification |
 | [docs/WORKSHOP.md](docs/WORKSHOP.md) | Ordered curriculum, hunt questions, role quick-starts, why teams run it |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Splunk dashboards, field reference, troubleshooting |
 | [docs/THREAT_SURFACES.md](docs/THREAT_SURFACES.md) | Eight agentic attack surfaces (2025–2026) mapped to lab scenarios |
@@ -460,6 +461,8 @@ This is **not** a direct Splunk SDK integration inside the Python apps. Telemetr
 
 ## Requirements
 
+> **Full checklist (hardware, Docker install, permissions, Splunk, verification):** **[docs/PREREQUISITES.md](docs/PREREQUISITES.md)**
+
 ### Hardware
 
 | Resource | Minimum | Recommended |
@@ -476,10 +479,12 @@ This is **not** a direct Splunk SDK integration inside the Python apps. Telemetr
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Docker | 24.0+ | Container runtime |
-| Docker Compose | v2.20+ | Stack orchestration |
+| Docker Compose | v2.20+ (`docker compose`) | Stack orchestration |
 | Git | Any recent | Clone the repository |
 | Web browser | Modern | Access dashboards |
 | Splunk (optional) | 9.2+ with MLTK | External Splunk instead of container |
+
+**Linux / Ubuntu VM:** Your user must be in the `docker` group (`docker ps` without `sudo`). See [PREREQUISITES.md](docs/PREREQUISITES.md#fix-permission-denied-on-dockersock).
 
 ### Network Ports
 
@@ -664,6 +669,8 @@ python3 scripts/sync_splunk_lookups.py
 ## Installation
 
 ### Step 1 — Clone and configure
+
+> **Prerequisites (Docker install, permissions, hardware):** [docs/PREREQUISITES.md](docs/PREREQUISITES.md)
 
 ```bash
 git clone https://github.com/machowdhury/OrchestraACME.git

@@ -2,7 +2,7 @@
 
 Run OrchestraACME on a **cloud virtual machine** instead of your laptop. This guide lists **which ports to open**, **which to keep private**, and **provider-specific firewall examples**.
 
-**Related:** [WORKSHOP.md](WORKSHOP.md) Level 0 · [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) · [.env.example](../.env.example)
+**Related:** [PREREQUISITES.md](PREREQUISITES.md) (full install checklist) · [WORKSHOP.md](WORKSHOP.md) Level 0 · [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) · [.env.example](../.env.example)
 
 ---
 
@@ -100,7 +100,23 @@ Set `SPLUNK_HEC_ENDPOINT`, `SPLUNK_HEC_TOKEN`, and index settings in `.env` befo
 | Storage | ≥ 50 GB gp3 (Splunk + Ollama models) |
 | VPC | Private subnet + bastion, **or** public subnet with strict security group |
 
-Install Docker and Docker Compose v2, clone the repo, copy `.env.example` → `.env`.
+### Install Docker on the VM
+
+Follow **[PREREQUISITES.md](PREREQUISITES.md)** — especially:
+
+1. Install Docker Engine + Compose v2 (`curl -fsSL https://get.docker.com | sudo sh`)
+2. Add the login user to the `docker` group: `sudo usermod -aG docker ubuntu` then re-login
+3. Verify: `docker ps` (no `sudo`)
+4. Clone repo and copy env:
+
+```bash
+git clone https://github.com/machowdhury/OrchestraACME.git
+cd OrchestraACME
+cp .env.example .env
+docker compose --profile local up --build -d
+```
+
+If you see `permission denied` on `/var/run/docker.sock`, you skipped step 2 — see [PREREQUISITES § docker.sock](PREREQUISITES.md#fix-permission-denied-on-dockersock).
 
 ### 2. Security group — inbound rules
 

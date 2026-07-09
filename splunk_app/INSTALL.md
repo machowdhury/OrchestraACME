@@ -1,5 +1,7 @@
 # OrchestraACME Splunk App Installation Guide
 
+**Before Splunk setup:** Complete stack prerequisites in **[docs/PREREQUISITES.md](../docs/PREREQUISITES.md)** (Docker, Ollama, HEC alignment).
+
 This guide covers installing the **GenAI Compliance Monitor** app (`acme_genai_compliance`) in three deployment modes.
 
 | Mode | Splunk Location | OrchestraACME Stack |

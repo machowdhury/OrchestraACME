@@ -48,17 +48,19 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_NUM_PARALLEL=2
       - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
+      - OLLAMA_STARTUP_WAIT_SEC=${OLLAMA_STARTUP_WAIT_SEC:-300}
     deploy:
       resources:
         limits:
           memory: 4G
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1"]
       interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
+      timeout: 15s
+      retries: 15
+      start_period: 300s
 
   # ---------------------------------------------------------------------------
   # BANKING APP — Real 4-agent LLM loop with OTel GenAI instrumentation

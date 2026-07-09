@@ -8,7 +8,7 @@
 | Splunk (run hunts) | http://localhost:8000 → **Search** or app dashboards |
 | Banking app | http://localhost:5000 |
 
-**Companion docs:** [USER_GUIDE.md](USER_GUIDE.md) (dashboards) · [THREAT_SURFACES.md](THREAT_SURFACES.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) (AWS / Azure / GCP ports)
+**Companion docs:** [PREREQUISITES.md](PREREQUISITES.md) (install checklist) · [USER_GUIDE.md](USER_GUIDE.md) (dashboards) · [THREAT_SURFACES.md](THREAT_SURFACES.md) · [MAESTRO_WORKSHOP.md](MAESTRO_WORKSHOP.md) · [CISCO_INTEGRATION.md](CISCO_INTEGRATION.md) · [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) (AWS / Azure / GCP ports)
 
 ---
 
@@ -265,9 +265,12 @@ Behind the scenes, Docker runs several small programs (containers) on your machi
 
 ### Before you start — checklist
 
+> **Full install guide:** [PREREQUISITES.md](PREREQUISITES.md) — Docker on Ubuntu, `docker.sock` permissions, Splunk app, verification.
+
 Ask your facilitator or IT contact if you are unsure. You need:
 
-- [ ] A computer with **Docker Desktop** installed (Mac/Windows) or Docker on Linux  
+- [ ] A computer or VM with **Docker Engine 24+** and **Compose v2** — `docker compose version` works  
+- [ ] **`docker ps` works without `sudo`** (Linux) — if not, see [PREREQUISITES § docker.sock](PREREQUISITES.md#fix-permission-denied-on-dockersock)  
 - [ ] At least **16 GB RAM** recommended if Splunk runs on the same machine  
 - [ ] Internet access for the first startup (downloads the AI model, ~1.3 GB)  
 - [ ] A web browser (Chrome, Edge, or Firefox)  
@@ -320,6 +323,7 @@ Path **A** is the default in this guide. Path **B** skips the local Splunk conta
    - The first run can take **5–15 minutes**.  
    - `-d` means “run in the background” so you can close the terminal window later.  
    - **PASS:** The command finishes without a red `ERROR` line.
+   - **If `permission denied` on `docker.sock`:** See [PREREQUISITES.md](PREREQUISITES.md#fix-permission-denied-on-dockersock) — add your user to the `docker` group, then retry without `sudo`.
 
 5. Check that services are running:
 
