@@ -48,6 +48,8 @@ Output: `dist/acme_genai_compliance-2.3.1.tar.gz`
 6. Verify: `` index=YOUR_INDEX sourcetype="otel:agentic:json" | head 5 ``
 7. **Enable saved searches** (optional): Settings → Searches, reports, and alerts → filter `GenAI Compliance` → enable after tuning.
 
+**Local Docker Splunk:** Run `./scripts/splunk_local_bootstrap.sh` from the repo root instead of manual index/HEC steps 2–3.
+
 ---
 
 ## Splunk Enterprise install

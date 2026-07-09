@@ -336,7 +336,8 @@ First Ollama model pull (~1.3 GB) requires outbound internet on first boot.
 | 0.1 | VM running, Docker installed, repo cloned, firewall rules applied |
 | 0.2 | `curl http://<VM-IP>:5001/health` — Attack Panel reachable from learner network |
 | 0.3 | Pattern A: `http://<VM-IP>:8000` — Pattern B: Splunk Cloud URL |
-| 0.4 | HEC verified (Setup Guide dashboard or `index=acme_agentic_telemetry \| stats count`) |
+| 0.3b | Pattern A: `./scripts/splunk_local_bootstrap.sh` (HEC + index) |
+| 0.4 | HEC verified (bootstrap HTTP 200 or `index=acme_agentic_telemetry \| stats count`) |
 | 0.5 | Benign loan on `http://<VM-IP>:5000` |
 
 Continue with [WORKSHOP.md](WORKSHOP.md) Level 1.
@@ -348,7 +349,8 @@ Continue with [WORKSHOP.md](WORKSHOP.md) Level 1.
 | Symptom | Check |
 |---------|--------|
 | Connection timeout on `:5001` | Cloud security group / NSG / GCP firewall + `ufw` |
-| Splunk empty (Pattern A) | HEC token matches `.env`; `docker compose logs otel_collector` |
+| Splunk empty (Pattern A) | HEC/index not configured | `./scripts/splunk_local_bootstrap.sh`; check `docker compose logs otel_collector` |
+| `connection reset by peer` on 8088 | HEC disabled | `./scripts/splunk_local_bootstrap.sh` |
 | Splunk empty (Pattern B) | Outbound `443` to Splunk Cloud; HEC token and index on Cloud |
 | LLM offline | `docker compose logs ollama` — model pull; **do not** open `11434` to debug publicly |
 | Works on VM localhost, not remotely | Docker publishes `0.0.0.0:5001` by default — cloud firewall is the usual blocker |
@@ -363,3 +365,4 @@ Continue with [WORKSHOP.md](WORKSHOP.md) Level 1.
 | [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) | Splunk Cloud / Enterprise app install |
 | [.env.example](../.env.example) | HEC and Splunk mode variables |
 | [README.md](../README.md) | Architecture and quick start |
+| [scripts/splunk_local_bootstrap.sh](../scripts/splunk_local_bootstrap.sh) | One-time local HEC + index setup |

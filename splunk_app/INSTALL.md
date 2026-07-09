@@ -148,7 +148,13 @@ docker cp splunk_app/splunk_compliance_app acme_splunk:/opt/splunk/etc/apps/acme
 docker compose exec splunk bash -c "chown -R splunk:splunk /opt/splunk/etc/apps/acme_genai_compliance && /opt/splunk/bin/splunk restart"
 ```
 
-Enable HEC and create index as documented in the main `README.md`.
+Enable HEC and create index:
+
+```bash
+./scripts/splunk_local_bootstrap.sh
+```
+
+Or configure manually in Splunk Web as documented in the main `README.md`.
 
 ---
 

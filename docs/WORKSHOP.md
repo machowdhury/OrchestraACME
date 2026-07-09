@@ -445,21 +445,28 @@ You should also see tabs such as **// Workshop** and **// Top 10 Scenarios**. St
 
 ### Step 0.4 — Confirm logs can reach Splunk (HEC)
 
-**What HEC means:** HTTP Event Collector — the pipe that sends security events from the lab into Splunk. You usually configure this once.
+**What HEC means:** HTTP Event Collector — the pipe that sends security events from the lab into Splunk. You configure this once.
 
 #### Path A — Local Splunk (default `.env`)
 
-The lab ships with a **default HEC token** in `.env` that matches the Docker Splunk container. For Level 0 you typically **do not** need to change anything if you used `cp .env.example .env` and Path A.
+`docker compose up` starts Splunk but **does not** enable HEC or create the index automatically. Run the bootstrap script once:
 
-**Quick check:**
+```bash
+chmod +x scripts/splunk_local_bootstrap.sh
+./scripts/splunk_local_bootstrap.sh
+```
+
+**PASS:** Script prints `HEC returned HTTP 200`.
+
+**Quick UI check (optional):**
 
 1. In Splunk (http://localhost:8000), go to **Settings → Data inputs → HTTP Event Collector**.  
-2. **PASS:** HEC is **enabled**, and a token exists (often pre-created for the lab).
+2. **PASS:** HEC is **enabled**, and token `orchestra-acme-otel` exists.
 
-3. Open **GenAI Compliance Monitor → Setup Guide** inside Splunk.  
-4. **PASS:** The guide shows your index name `acme_agentic_telemetry` and sourcetype `otel:agentic:json`.
+3. Open **GenAI Compliance Monitor → Setup Guide** inside Splunk (after Step 0.3).  
+4. **PASS:** Index `acme_agentic_telemetry` and sourcetype `otel:agentic:json`.
 
-If events never appear after Step 0.5, ask your facilitator to verify `SPLUNK_HEC_TOKEN` in `.env` matches Splunk’s token — see README “Splunk quick checklist”.
+If events never appear after Step 0.5, re-run the bootstrap script and verify `SPLUNK_HEC_TOKEN` in `.env` — see [USER_GUIDE.md](USER_GUIDE.md) “Splunk quick checklist”.
 
 #### Path B — Splunk Cloud
 
@@ -541,7 +548,9 @@ Next: [Level 1 — Pipeline proof](#level-1--pipeline-proof-everyone) (**▶ RUN
 | Attack Panel **LLM OFFLINE** | Model still downloading | `docker compose logs -f ollama` — wait for `llama3.2:1b` |
 | Attack Panel **TARGET OFFLINE** | Banking container not up | `docker compose ps` — restart: `docker compose --profile local up -d` |
 | Splunk login page won’t load | Splunk still starting (up to 8 min) | `docker compose logs -f splunk` — wait for “running” |
-| Splunk **Overview** shows 0 events | HEC not wired or too soon | Wait 60s after Step 0.5; check Setup Guide; verify `.env` HEC token |
+| Splunk **Overview** shows 0 events | HEC not configured or too soon | Run `./scripts/splunk_local_bootstrap.sh`; wait 60s after Step 0.5 |
+| OTel logs `connection reset by peer` on 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
+| OTel logs `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script fixes this; `docker compose restart otel_collector` |
 | Browser can’t open `:5001` on cloud VM | Firewall | Open ports per [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
 | `permission denied` on scripts | Script not executable | `chmod +x scripts/package_splunk_app.sh` |
 | Everything slow | Not enough RAM | Close other apps; use machine with 16+ GB RAM |

@@ -25,14 +25,14 @@ docker compose --profile local up --build -d
 
 > **Cloud VM (AWS EC2 / Azure / Google Compute Engine):** See [docs/CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) for which ports to open on security groups / firewalls (`5000`, `5001`, `8000` restricted — never expose `8088`, `11434`, or OTel ports to the internet).
 
-Wait for Ollama (`docker compose logs -f ollama`). Install the Splunk app — [splunk_app/INSTALL.md](../splunk_app/INSTALL.md).
+Wait for Ollama (`docker compose logs -f ollama`). Configure Splunk HEC and install the compliance app — [splunk_app/INSTALL.md](../splunk_app/INSTALL.md).
 
 Confirm the panel header shows **TARGET ONLINE** and **LLM ONLINE** before firing attacks.
 
-**Splunk quick checklist** (do once):
+**Splunk quick checklist** (do once after `docker compose up`):
 
-1. `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-2.3.0.tar.gz`
-2. Index `acme_agentic_telemetry` + HEC token → sourcetype `otel:agentic:json`
+1. `./scripts/splunk_local_bootstrap.sh` — enables HEC, creates index `acme_agentic_telemetry`, creates token matching `.env`
+2. `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-*.tar.gz` (version in filename)
 3. Verify: `` index=acme_agentic_telemetry earliest=-15m | stats count ``
 
 ---

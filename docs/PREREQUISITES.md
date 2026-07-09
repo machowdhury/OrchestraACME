@@ -18,7 +18,7 @@ Complete this checklist **before** `docker compose up` or the workshop. Use it o
 | 6 | **Inbound ports** open (cloud VM only) | `5000`, `5001`, optionally `8000` — see [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
 | 7 | Stack started | `docker compose --profile local up --build -d` |
 | 8 | **Ollama model** pulled | `docker compose logs ollama` shows `llama3.2:1b` |
-| 9 | **Splunk index + HEC + app** configured (one-time) | [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
+| Splunk one-time | App + index + **HEC** — **not** automatic on `docker compose up` | Run `./scripts/splunk_local_bootstrap.sh` then install app — [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
 | 10 | **Attack Panel** shows TARGET + LLM **ONLINE** | http://localhost:5001 |
 
 ---
@@ -199,12 +199,22 @@ Full firewall examples: [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md).
 
 `docker compose up` does **not** install the compliance app or create the index.
 
+**Quick path (local Docker Splunk):**
+
+```bash
+chmod +x scripts/splunk_local_bootstrap.sh
+./scripts/splunk_local_bootstrap.sh
+```
+
+This enables HEC, creates index `acme_agentic_telemetry`, creates a token matching `.env`, fixes shared volume permissions for the OTel file exporter, and tests ingest.
+
 | Step | Action | Doc |
 |------|--------|-----|
+| 0 | **HEC + index** (local Docker) | `./scripts/splunk_local_bootstrap.sh` |
 | 1 | Package app | `./scripts/package_splunk_app.sh` |
 | 2 | Install `dist/acme_genai_compliance-*.tar.gz` | Splunk **Apps → Upload** |
-| 3 | Create index `acme_agentic_telemetry` | Settings → Indexes |
-| 4 | Create HEC token matching `.env` | Settings → HEC |
+| 3 | Create index `acme_agentic_telemetry` | *(skip if bootstrap ran)* |
+| 4 | Create HEC token matching `.env` | *(skip if bootstrap ran)* |
 | 5 | Verify ingest | `` index=acme_agentic_telemetry earliest=-15m \| stats count `` |
 
 **MLTK (optional):** Required for **CTSM token anomaly** panel — install Splunk **Machine Learning Toolkit** app.
@@ -270,8 +280,10 @@ Expect `BASELINE_TRAFFIC` after a few minutes even if you have not attacked yet.
 | `acme_otel_collector` shows **unhealthy** | Old compose healthcheck used `wget` (not in distroless image) | `git pull` and `docker compose up -d` — collector works; status label fixed in latest compose |
 | `acme_ollama is unhealthy` | Init healthcheck failed (often missing `curl` or low RAM) | Pull latest repo; `docker compose up --build -d`; ensure **≥ 8 GB** host RAM (16 GB for Pattern A) |
 | `TARGET OFFLINE` | Banking container down | `docker compose ps`; `docker compose logs banking_app` |
-| Splunk dashboards empty | App/index/HEC not configured | [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
-| No events in Splunk Search | HEC token mismatch | Align `.env` `SPLUNK_HEC_TOKEN` with Splunk HEC token |
+| Splunk dashboards empty | App/index/HEC not configured | Run `./scripts/splunk_local_bootstrap.sh` then [splunk_app/INSTALL.md](../splunk_app/INSTALL.md) |
+| No events in Splunk Search | HEC token mismatch | `.env` `SPLUNK_HEC_TOKEN` must match Splunk token; run bootstrap script |
+| `connection reset by peer` on port 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
+| `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script `chmod 1777` on `/var/log/defenseclaw`; restart otel |
 | `permission denied` on scripts | Scripts not executable | `chmod +x scripts/*.sh` |
 | Out of disk | Model + Splunk growth | `df -h`; expand volume or `docker system prune` |
 | Slow LLM on VM | CPU-only inference | Expected; first response 10–30+ seconds |

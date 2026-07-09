@@ -285,7 +285,7 @@ We document these on purpose so expectations stay realistic:
 
 1. **Regex defenses miss and over-block.** Novel jailbreaks may succeed; benign text may match financial regexes. Tune patterns in `llm_client.py` for your demos.
 2. **Small models behave inconsistently.** Attack success rates vary run-to-run. Use results to test *detections*, not to score model safety scientifically.
-3. **Splunk setup is manual.** Index creation, HEC token, app install, and MLTK are your steps — especially on Splunk Cloud.
+3. **Splunk setup is manual.** Local Docker: run `./scripts/splunk_local_bootstrap.sh` for HEC + index, then install the app. Splunk Cloud: index, HEC token, app install, and MLTK are your steps.
 4. **No auto model routing.** All four agents share one `OLLAMA_MODEL`.
 5. **Default credentials are public in this repo.** Fine for localhost labs only.
 6. **Framework mappings include control attestation** — NIST pass/fail is emitted per event; not a certified compliance attestation.
@@ -659,7 +659,7 @@ Regenerate Splunk lookups after taxonomy changes:
 
 ```bash
 python3 scripts/sync_splunk_lookups.py
-./scripts/package_splunk_app.sh   # outputs dist/acme_genai_compliance-2.1.0.tar.gz
+./scripts/package_splunk_app.sh   # outputs dist/acme_genai_compliance-*.tar.gz
 ```
 
 **Legacy (optional):** `splunk_app/App-Agentic-Compliance/` — Cisco AI Defense crosswalk for `cisco:aidefense:json` events
@@ -690,6 +690,15 @@ First startup takes **5–15 minutes** because:
 
 - Ollama pulls the `llama3.2:1b` model (~1.3 GB)
 - Splunk initializes and accepts the license
+
+**Splunk HEC (required for events in Splunk):**
+
+```bash
+chmod +x scripts/splunk_local_bootstrap.sh
+./scripts/splunk_local_bootstrap.sh
+```
+
+Without index + HEC, the OTel collector logs `connection reset by peer` on port 8088 — banking app and baseline traffic still run; Splunk stays empty until HEC is configured.
 
 ### Step 2b — Cloud VM (optional)
 
@@ -735,15 +744,16 @@ Expected state: all services `running` / `healthy`.
 
 ### Step 5 — Install the Splunk compliance app
 
-> **This step is required for dashboards.** Compose does not install Splunk apps automatically. Without it, you can still run SPL queries on raw `otel:agentic:json` events if the index exists.
+> **Prerequisite:** Step 2 bootstrap (`./scripts/splunk_local_bootstrap.sh`) must have run so HEC and index exist. This step adds dashboards.
 
 **Option A — Local Docker (package install):**
 
 ```bash
 ./scripts/package_splunk_app.sh
-docker cp dist/acme_genai_compliance-2.1.0.tar.gz acme_splunk:/tmp/
+# Replace VERSION with the file under dist/ (e.g. 2.4.0)
+docker cp dist/acme_genai_compliance-VERSION.tar.gz acme_splunk:/tmp/
 docker compose exec splunk /opt/splunk/bin/splunk install app \
-  /tmp/acme_genai_compliance-2.1.0.tar.gz -update 1 -auth admin:ACMEPassword2026!
+  /tmp/acme_genai_compliance-VERSION.tar.gz -update 1 -auth admin:ACMEPassword2026!
 docker compose exec splunk /opt/splunk/bin/splunk restart
 ```
 
@@ -751,9 +761,7 @@ docker compose exec splunk /opt/splunk/bin/splunk restart
 
 See **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)** — build the package, upload to Splunk Cloud, configure HEC, then run OrchestraACME in external mode.
 
-Create the telemetry index in Splunk Web: **Settings → Indexes → New Index** → `acme_agentic_telemetry`
-
-Enable HEC: **Settings → Data Inputs → HTTP Event Collector** → token `acme-hec-token-0000-1111-2222-3333`
+For local Docker, HEC and index are created by `./scripts/splunk_local_bootstrap.sh` (Step 2). Manual UI path: **Settings → Indexes** and **Settings → HTTP Event Collector**.
 
 ### Step 6 — Install MLTK (for advanced analytics panels)
 
@@ -772,7 +780,7 @@ Use this to confirm the full pipeline end-to-end:
 - [ ] `docker compose ps` — all services `running` / `healthy`
 - [ ] `curl http://localhost:5000/health` — banking app up
 - [ ] `docker compose exec ollama ollama list` — shows your `OLLAMA_MODEL`
-- [ ] Splunk index `acme_agentic_telemetry` exists
+- [ ] `./scripts/splunk_local_bootstrap.sh` — HEC enabled, index `acme_agentic_telemetry` exists
 - [ ] HEC token allows sourcetype `otel:agentic:json` into that index
 - [ ] `acme_genai_compliance` app installed and Splunk restarted
 - [ ] Run one attack on :5001, then in Splunk: `index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 5`
@@ -883,7 +891,7 @@ Full installation guide: **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)**
 
 | Mode | Splunk | OrchestraACME Command |
 |------|--------|----------------------|
-| **Local lab** | Docker Splunk container | `docker compose --profile local up --build -d` |
+| **Local lab** | Docker Splunk container | `docker compose --profile local up --build -d` then `./scripts/splunk_local_bootstrap.sh` |
 | **Splunk Cloud** | Your Cloud stack | `docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -d` |
 | **Splunk Enterprise** | On-prem instance | Same as Splunk Cloud (external mode) |
 
@@ -892,17 +900,26 @@ Full installation guide: **[splunk_app/INSTALL.md](splunk_app/INSTALL.md)**
 ```bash
 chmod +x scripts/package_splunk_app.sh
 ./scripts/package_splunk_app.sh
-# Output: dist/acme_genai_compliance-2.1.0.tar.gz
+# Output: dist/acme_genai_compliance-*.tar.gz (version in filename)
 ```
 
 **Splunk Cloud:** Apps → Upload app → select the `.tar.gz`  
-**Splunk Enterprise:** `$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-2.1.0.tar.gz`
+**Splunk Enterprise:** `$SPLUNK_HOME/bin/splunk install app dist/acme_genai_compliance-*.tar.gz`
 
-After install, open **GenAI Compliance Monitor → Setup Guide** for HEC configuration and health checks.
+**Local Docker:** After `docker compose up`, run `./scripts/splunk_local_bootstrap.sh` before installing the app.
+
+After install, open **GenAI Compliance Monitor → Setup Guide** for health checks.
+
+### Local Docker Quick Setup (Pattern A)
+
+1. **Start stack** — `docker compose --profile local up --build -d`
+2. **Bootstrap HEC** — `./scripts/splunk_local_bootstrap.sh`
+3. **Install app** — `./scripts/package_splunk_app.sh` → install `dist/acme_genai_compliance-*.tar.gz` into `acme_splunk`
+4. **Verify** — `index=acme_agentic_telemetry sourcetype="otel:agentic:json" | head 20`
 
 ### Splunk Cloud Quick Setup
 
-1. **Install app** — upload `dist/acme_genai_compliance-2.1.0.tar.gz`
+1. **Install app** — upload `dist/acme_genai_compliance-*.tar.gz`
 2. **Create index** — `acme_agentic_telemetry`
 3. **Create HEC token** — sourcetype `otel:agentic:json`, index `acme_agentic_telemetry`
 4. **Configure OrchestraACME `.env`** — set `SPLUNK_MODE=external` and your Cloud HEC URL/token
@@ -918,6 +935,8 @@ These values **must match** across `.env`, `docker-compose.yml`, and Splunk HEC 
 | `SPLUNK_HEC_TOKEN` | `acme-hec-token-0000-1111-2222-3333` |
 | `SPLUNK_HEC_INDEX` | `acme_agentic_telemetry` |
 | `SPLUNK_HEC_SOURCETYPE` | `otel:agentic:json` |
+
+**Local Docker:** Run `./scripts/splunk_local_bootstrap.sh` once after `docker compose up` to create the index and HEC token with these defaults.
 
 ### External Splunk Cloud / Enterprise
 
@@ -988,9 +1007,11 @@ docker compose -f docker-compose.yml -f docker-compose.external.yml up --build -
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Banking app returns 502 / timeout | Ollama not ready | `docker compose logs ollama` — wait for model pull |
-| No Splunk events | HEC token mismatch | Verify token alignment across 3 config files |
+| No Splunk events | HEC/index not configured | `./scripts/splunk_local_bootstrap.sh` |
+| OTel `connection reset by peer` on 8088 | HEC disabled | `./scripts/splunk_local_bootstrap.sh` |
+| OTel `permission denied` on jsonl file | Shared volume permissions | Bootstrap script; `docker compose restart otel_collector` |
 | DefenseClaw never fires | Attack too mild | Try Runtime Prompt Injection, MCP Tool Escape, or Rogue Agent scenarios |
-| Compliance dashboard empty | App not installed | Install `splunk_compliance_app` and create `acme_agentic_telemetry` index |
+| Compliance dashboard empty | App not installed | Install `splunk_compliance_app` (HEC/index via bootstrap first) |
 | CTSM panel shows error | MLTK not installed | Install Machine Learning Toolkit |
 | Ollama GPU error | No NVIDIA driver | Remove `deploy` GPU block in compose |
 | Splunk slow to start | Normal on first boot | Wait 3–5 min; check `docker compose logs splunk` |
@@ -1059,6 +1080,7 @@ This is a **deliberately vulnerable lab environment** designed for security rese
 # Start everything
 cp .env.example .env
 docker compose --profile local up --build -d
+./scripts/splunk_local_bootstrap.sh
 
 # Open dashboards
 open http://localhost:5000    # Banking App
