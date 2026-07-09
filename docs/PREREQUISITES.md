@@ -284,6 +284,7 @@ Expect `BASELINE_TRAFFIC` after a few minutes even if you have not attacked yet.
 | No events in Splunk Search | HEC token mismatch | `.env` `SPLUNK_HEC_TOKEN` must match Splunk token; run bootstrap script |
 | Cannot log in to Splunk Web | `.env` deleted or wrong password | `cp .env.example .env` then `./scripts/splunk_reset_admin_password.sh` |
 | `.env` file missing | Never committed (gitignored) | `./scripts/restore_env.sh` |
+| **Start lab from scratch** | Broken Splunk / lost config | `./scripts/lab_fresh_start.sh` (destroys volumes) |
 | `connection reset by peer` on port 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
 | App install `bundle_tmp` / Permission denied | Prior `splunk` CLI as root | `git pull` then `./scripts/splunk_install_app.sh` (copies to `etc/apps`, repairs ownership) |
 | `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script `chmod 1777` on `/var/log/defenseclaw`; restart otel |

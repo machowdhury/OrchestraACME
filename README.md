@@ -1051,6 +1051,9 @@ docker compose down
 
 # Full teardown including model data
 docker compose down -v
+
+# Nuclear reset + rebuild (containers, volumes, .env, Splunk HEC, app)
+./scripts/lab_fresh_start.sh
 ```
 
 ### Health Check Endpoints
