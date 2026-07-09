@@ -130,6 +130,7 @@ def run_agent_pipeline(
     user_input: str,
     session_id: Optional[str] = None,
     campaign_week: int = 0,
+    testbed_mode: str = "BANKING_LIVE",
 ) -> dict:
     """
     Routes user_input through all four agents in sequence.
@@ -172,6 +173,7 @@ def run_agent_pipeline(
             temperature=agent["temperature"],
             max_tokens=agent["max_tokens"],
             campaign_week=campaign_week,
+            testbed_mode=testbed_mode,
         )
 
         agent_record = {

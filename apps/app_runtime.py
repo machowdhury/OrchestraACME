@@ -44,6 +44,7 @@ def health():
         "ollama_model":   _OLLAMA_MODEL,
         "service":        "acme-banking-fabric",
         "version":        "3.0.0",
+        "traffic_sim":    traffic_status(),
         "timestamp":      time.time(),
     })
 
@@ -414,6 +415,7 @@ from framework.api_routes import register_chain_routes, register_framework_route
 from framework.cisco_routes import register_cisco_routes
 from framework.maestro_workshop import register_maestro_routes
 from framework.dataset_exporter import register_export_routes
+from framework.traffic_simulator import get_status as traffic_status, maybe_autostart, run_tick, start as traffic_start, stop as traffic_stop
 from framework.campaign_manifest import get_all_campaign_weeks
 from framework.attack_payloads import EMERGING_ATTACK_CLASSES
 from framework.control_validator import evaluate_controls, control_summary
@@ -442,6 +444,32 @@ register_maestro_routes(app)
 register_export_routes(app, base_output_dir="/var/log/defenseclaw")
 
 
+@app.route("/api/v1/traffic/status", methods=["GET"])
+def traffic_sim_status():
+    return jsonify(traffic_status())
+
+
+@app.route("/api/v1/traffic/start", methods=["POST"])
+def traffic_sim_start():
+    return jsonify(traffic_start())
+
+
+@app.route("/api/v1/traffic/stop", methods=["POST"])
+def traffic_sim_stop():
+    return jsonify(traffic_stop())
+
+
+@app.route("/api/v1/traffic/tick", methods=["POST"])
+def traffic_sim_tick():
+    data = request.get_json(silent=True) or {}
+    force_pipeline = data.get("full_pipeline")
+    if force_pipeline is not None:
+        force_pipeline = bool(force_pipeline)
+    return jsonify(run_tick(force_pipeline=force_pipeline))
+
+
+maybe_autostart()
+
+
 if __name__ == "__main__":
-    logger.info(f"OrchestraACME Banking Fabric v3.0 starting | model={_OLLAMA_MODEL}")
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)

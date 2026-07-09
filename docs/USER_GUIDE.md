@@ -689,7 +689,31 @@ curl -X POST http://localhost:5001/api/chains/KC-C001/execute -H "Content-Type: 
 
 ## Banking app (benign baseline)
 
-http://localhost:5000 — normal loan through **Run Through All Agents** before workshops (establishes “good” telemetry contrast).
+http://localhost:5000 — normal loan processing UI.
+
+**Continuous baseline (default):** With `TRAFFIC_SIM_ENABLED=true` (see `.env`), the banking app sends **benign loan requests** every 90–240 seconds through live Ollama agents. Events land in Splunk with `testbed_mode=BASELINE_TRAFFIC` so hunts can separate noise from attacks.
+
+| API | Purpose |
+|-----|---------|
+| `GET /api/v1/traffic/status` | Simulator running, tick counts, last error |
+| `POST /api/v1/traffic/start` | Start background loop |
+| `POST /api/v1/traffic/stop` | Pause baseline (attacks still work) |
+| `POST /api/v1/traffic/tick` | Fire one baseline event immediately |
+
+**Splunk — baseline only:**
+
+```spl
+`acme_genai_index` earliest=-1h testbed_mode=BASELINE_TRAFFIC
+| timechart span=5m count by gen_ai.agent.name
+```
+
+**Splunk — attacks only (exclude baseline):**
+
+```spl
+`acme_genai_index` earliest=-1h NOT testbed_mode=BASELINE_TRAFFIC
+```
+
+~20% of baseline ticks run the **full 4-agent pipeline**; the rest hit **intake only** to keep CPU load reasonable on small VMs. Tune with `TRAFFIC_SIM_PIPELINE_RATIO`, `TRAFFIC_SIM_INTERVAL_MIN_SEC`, `TRAFFIC_SIM_INTERVAL_MAX_SEC` in `.env`.
 
 ---
 

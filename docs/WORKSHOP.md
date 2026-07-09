@@ -463,38 +463,51 @@ Your admin confirms `.env` on the lab machine has the correct **Splunk Cloud HEC
 
 ---
 
-### Step 0.5 — Send harmless “normal” traffic (not an attack)
+### Step 0.5 — Confirm harmless “normal” traffic (not an attack)
 
-**Why:** The workshop compares **normal** loan traffic with **attack** traffic. This step creates a few normal events in Splunk.
+**Why:** The workshop compares **normal** loan traffic with **attack** traffic. The banking app now sends **continuous baseline traffic** automatically once Ollama is healthy (every 90–240 seconds). You can still submit manual requests on the UI, but you should see events in Splunk without clicking anything.
 
 **Who does this:** Everyone.
 
+**Option A — Automatic (default)**
+
+1. After stack startup, wait **~2–3 minutes** (Ollama model pull + 45s simulator delay).
+2. Check simulator status: `curl http://localhost:5000/api/v1/traffic/status` — `"running": true`, `ticks_ok` increasing.
+3. Open Splunk → **GenAI Compliance Monitor → Overview**
+4. **PASS:** Event count grows over time; many rows have `testbed_mode=BASELINE_TRAFFIC`.
+
+**Option B — Manual (optional extra)**
+
 1. Open the banking app: **http://localhost:5000**
-
-2. You should see a simple **loan application** page with a text box.
-
-3. Type a normal message, for example:
+2. Type a normal message, for example:
 
    ```text
    I would like to apply for a small business loan. Annual revenue is $250,000.
    ```
 
-4. Click the button to **run the application through all agents** (wording may be “Run Through All Agents” or “Process” — use the main green/submit action on the page).
+3. Click **Run Through All Agents** / **Process**.
+4. Wait **30–60 seconds** for logs to travel: Banking app → collector → Splunk.
 
-5. Wait **30–60 seconds** for logs to travel: Banking app → collector → Splunk.
+**Splunk validation (everyone)**
 
-6. Open Splunk → **GenAI Compliance Monitor → Overview**
+1. Open Splunk → **GenAI Compliance Monitor → Overview**
 
-7. **PASS (non-technical):** A number greater than **0** appears for total events (for example “Total Security Events”). Charts may show agent names.
+2. **PASS (non-technical):** A number greater than **0** appears for total events. Charts may show agent names.
 
-8. **PASS (technical optional):** In **Search**, run:
+3. **PASS (technical optional):** In **Search**, run:
 
    ```spl
    `acme_genai_index` earliest=-15m
-   | stats count by gen_ai.agent.name
+   | stats count by testbed_mode gen_ai.agent.name
    ```
 
-   You should see counts for agents such as `acme-agent-intake-001`.
+   You should see `BASELINE_TRAFFIC` and/or `BANKING_LIVE` counts across agents such as `acme-agent-intake-001`.
+
+4. **Filter attacks only** (exclude baseline noise):
+
+   ```spl
+   `acme_genai_index` earliest=-1h NOT testbed_mode=BASELINE_TRAFFIC
+   ```
 
 If Overview shows **0** events, wait another 60 seconds and click refresh. Still zero → see troubleshooting below.
 

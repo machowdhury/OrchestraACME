@@ -43,6 +43,7 @@ The goal is not to certify your bank — it is to give detection engineers, arch
 | **Detection engineering** | Splunk compliance app: coverage %, MTTD-style panels, actor-chain narrative, MLTK anomaly hunts (optional Cisco overlay) |
 | **Compliance narrative** | Control Attestation and NIST dashboards tie runtime events to framework controls — exportable for audit conversations |
 | **Honest gaps** | Some attacks **INJECT** despite controls — intentional. You learn what detections still need to be built |
+| **Continuous baseline** | Background benign loan traffic (`BASELINE_TRAFFIC`) keeps Splunk dashboards alive between workshop attacks — realistic signal/noise ratio |
 
 You walk away with **SPL you can adapt**, **dashboard screenshots**, and **architecture vocabulary** (block vs detect-only, surface vs prompt) — artifacts you can use in the SOC and in governance reviews the same week.
 
@@ -170,7 +171,8 @@ Nothing in step 4–7 happens inside Ollama. Nothing in step 6–7 requires the 
 | Ollama model pull | 2–10 min | `docker compose logs -f ollama` — downloads `llama3.2:1b` (~1.3 GB) unless cached |
 | Splunk first init | 3–8 min | `docker compose logs -f splunk` — license acceptance, indexer startup |
 | Banking app ready | After Ollama healthy | http://localhost:5000 responds; LLM calls fail until model is pulled |
-| Splunk events | After HEC + index exist | Events appear only when HEC token, index, and collector config align |
+| Baseline traffic | ~45s after banking app + Ollama healthy | Background simulator sends benign loan requests every 90–240s (`testbed_mode=BASELINE_TRAFFIC`) |
+| Splunk events | After HEC + index exist | Baseline + attack events appear when HEC token, index, and collector config align |
 | Dashboards | After **you** install the app | Empty Splunk UI until `acme_genai_compliance` is installed and index has data |
 
 **Important:** `docker compose up` alone does **not** install the Splunk compliance app or create the `acme_agentic_telemetry` index. Those are documented steps you run once.
