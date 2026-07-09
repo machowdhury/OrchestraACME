@@ -551,6 +551,7 @@ Next: [Level 1 — Pipeline proof](#level-1--pipeline-proof-everyone) (**▶ RUN
 | Splunk **Overview** shows 0 events | HEC not configured or too soon | Run `./scripts/splunk_local_bootstrap.sh`; wait 60s after Step 0.5 |
 | OTel logs `connection reset by peer` on 8088 | HEC disabled or index missing | `./scripts/splunk_local_bootstrap.sh` |
 | OTel logs `permission denied` on `otel-raw-genai.jsonl` | Shared volume permissions | Bootstrap script fixes this; `docker compose restart otel_collector` |
+| Bootstrap `Permission denied` on `/opt/splunk/...` | Old bootstrap used Splunk CLI as root | `git pull` and re-run `./scripts/splunk_local_bootstrap.sh` |
 | Browser can’t open `:5001` on cloud VM | Firewall | Open ports per [CLOUD_VM_DEPLOYMENT.md](CLOUD_VM_DEPLOYMENT.md) |
 | `permission denied` on scripts | Script not executable | `chmod +x scripts/package_splunk_app.sh` |
 | Everything slow | Not enough RAM | Close other apps; use machine with 16+ GB RAM |

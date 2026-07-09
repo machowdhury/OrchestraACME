@@ -2,6 +2,7 @@
 # =============================================================================
 # OrchestraACME — One-time local Splunk bootstrap (Docker Pattern A)
 # Creates index + HEC token to match .env, fixes shared telemetry volume perms.
+# Uses Splunk REST API (curl) — avoids splunk CLI permission issues as root.
 # =============================================================================
 set -euo pipefail
 
@@ -21,13 +22,29 @@ SPLUNK_CONTAINER="${SPLUNK_CONTAINER:-acme_splunk}"
 HEC_TOKEN="${SPLUNK_HEC_TOKEN:-acme-hec-token-0000-1111-2222-3333}"
 HEC_INDEX="${SPLUNK_HEC_INDEX:-acme_agentic_telemetry}"
 HEC_SOURCETYPE="${SPLUNK_HEC_SOURCETYPE:-otel:agentic:json}"
+HEC_INPUT_NAME="${SPLUNK_HEC_INPUT_NAME:-orchestra-acme-otel}"
 AUTH="admin:${SPLUNK_PASSWORD}"
-SPLUNK_BIN="/opt/splunk/bin/splunk"
+MGMT_URL="https://127.0.0.1:8089"
+
+splunk_curl() {
+  local method="$1"
+  local path="$2"
+  shift 2
+  docker exec "$SPLUNK_CONTAINER" curl -sk -u "$AUTH" -X "$method" \
+    "${MGMT_URL}${path}" "$@"
+}
+
+splunk_http_code() {
+  local method="$1"
+  local path="$2"
+  shift 2
+  splunk_curl "$method" "$path" -o /dev/null -w "%{http_code}" "$@"
+}
 
 echo "[bootstrap] Waiting for Splunk container (${SPLUNK_CONTAINER})..."
 for i in $(seq 1 60); do
-  if docker exec "$SPLUNK_CONTAINER" curl -sf -k "https://localhost:8089/services/server/info" \
-      -u "$AUTH" >/dev/null 2>&1; then
+  code="$(splunk_http_code GET "/services/server/info" 2>/dev/null || echo "000")"
+  if [[ "$code" == "200" ]]; then
     echo "[bootstrap] Splunk management API is up."
     break
   fi
@@ -43,26 +60,51 @@ docker exec -u root "$SPLUNK_CONTAINER" sh -c \
   'mkdir -p /var/log/defenseclaw && chmod 1777 /var/log/defenseclaw' || true
 
 echo "[bootstrap] Enabling HTTP Event Collector (global)..."
-docker exec "$SPLUNK_CONTAINER" "$SPLUNK_BIN" http-event-collector enable -auth "$AUTH" || true
-
-echo "[bootstrap] Creating index '${HEC_INDEX}' (if missing)..."
-if ! docker exec "$SPLUNK_CONTAINER" "$SPLUNK_BIN" list index -auth "$AUTH" 2>/dev/null | grep -q "^${HEC_INDEX} "; then
-  docker exec "$SPLUNK_CONTAINER" "$SPLUNK_BIN" add index "$HEC_INDEX" -auth "$AUTH"
+hec_global_code="$(splunk_http_code POST "/services/data/inputs/http/http/enable" 2>/dev/null || echo "000")"
+if [[ "$hec_global_code" == "200" || "$hec_global_code" == "201" ]]; then
+  echo "[bootstrap] HEC enabled."
 else
-  echo "[bootstrap] Index already exists."
+  echo "[bootstrap] HEC enable returned HTTP ${hec_global_code} (may already be enabled)."
 fi
 
-echo "[bootstrap] Creating HEC token (name: orchestra-acme-otel)..."
-# Remove stale input with same name so re-runs are idempotent
-docker exec "$SPLUNK_CONTAINER" "$SPLUNK_BIN" remove httpevent \
-  -name orchestra-acme-otel -auth "$AUTH" 2>/dev/null || true
+echo "[bootstrap] Creating index '${HEC_INDEX}' (if missing)..."
+index_code="$(splunk_http_code GET "/services/data/indexes/${HEC_INDEX}" 2>/dev/null || echo "404")"
+if [[ "$index_code" == "200" ]]; then
+  echo "[bootstrap] Index already exists."
+else
+  create_code="$(splunk_http_code POST "/services/data/indexes" \
+    -d "name=${HEC_INDEX}" -d "datatype=event" 2>/dev/null || echo "000")"
+  if [[ "$create_code" == "200" || "$create_code" == "201" ]]; then
+    echo "[bootstrap] Index created."
+  else
+    echo "[bootstrap] ERROR: failed to create index (HTTP ${create_code})"
+    splunk_curl POST "/services/data/indexes" -d "name=${HEC_INDEX}" -d "datatype=event" || true
+    exit 1
+  fi
+fi
 
-docker exec "$SPLUNK_CONTAINER" "$SPLUNK_BIN" http-event-collector create -auth "$AUTH" \
-  -name orchestra-acme-otel \
-  -uri /services/data/inputs/http/orchestra-acme-otel \
-  -index "$HEC_INDEX" \
-  -sourcetype "$HEC_SOURCETYPE" \
-  -token "$HEC_TOKEN"
+echo "[bootstrap] Configuring HEC token (input: ${HEC_INPUT_NAME})..."
+# Remove stale input with same name so re-runs are idempotent
+delete_code="$(splunk_http_code DELETE "/services/data/inputs/http/${HEC_INPUT_NAME}" 2>/dev/null || echo "404")"
+if [[ "$delete_code" == "200" ]]; then
+  echo "[bootstrap] Removed previous HEC input '${HEC_INPUT_NAME}'."
+fi
+
+token_code="$(splunk_http_code POST "/services/data/inputs/http" \
+  -d "name=${HEC_INPUT_NAME}" \
+  -d "token=${HEC_TOKEN}" \
+  -d "index=${HEC_INDEX}" \
+  -d "sourcetype=${HEC_SOURCETYPE}" \
+  -d "disabled=0" 2>/dev/null || echo "000")"
+if [[ "$token_code" == "200" || "$token_code" == "201" ]]; then
+  echo "[bootstrap] HEC token configured."
+else
+  echo "[bootstrap] WARN: HEC token create returned HTTP ${token_code}"
+  echo "[bootstrap] Checking for existing token from SPLUNK_HEC_TOKEN env..."
+  splunk_curl GET "/services/data/inputs/http" | grep -q "${HEC_TOKEN}" && \
+    echo "[bootstrap] Found existing token in Splunk — verify index is ${HEC_INDEX}" || \
+    { echo "[bootstrap] ERROR: no matching HEC token"; exit 1; }
+fi
 
 echo "[bootstrap] Restarting OTel collector to flush HEC retry queue..."
 docker compose restart otel_collector >/dev/null 2>&1 || true

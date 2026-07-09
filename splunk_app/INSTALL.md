@@ -216,6 +216,7 @@ See **[splunk_app/CLOUD_VETTING.md](CLOUD_VETTING.md)** for the full checklist a
 | App upload rejected on Splunk Cloud | Request private app install from Splunk support/admin |
 | No data in dashboards | Verify `acme_genai_index` macro matches your index/sourcetype |
 | HEC 403 errors | Token index/sourcetype permissions; verify token is active |
+| Bootstrap Permission denied on `/opt/splunk` | Re-run after `git pull` — bootstrap uses REST API, not `splunk` CLI as root |
 | Fields not extracted | Confirm sourcetype is `otel:agentic:json`; check `default/props.conf` loaded |
 | MLTK panels empty | Install Machine Learning Toolkit from Splunkbase (optional) |
 
