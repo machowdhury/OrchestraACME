@@ -1,0 +1,8 @@
+#!/bin/sh
+# Strip Cursor co-author trailers so GitHub does not list cursoragent as a contributor.
+# Enable once per clone: git config core.hooksPath scripts/git-hooks
+COMMIT_MSG_FILE="$1"
+if [ -f "$COMMIT_MSG_FILE" ]; then
+  sed -i '' '/^Co-authored-by: Cursor <cursoragent@cursor.com>$/d' "$COMMIT_MSG_FILE" 2>/dev/null \
+    || sed -i '/^Co-authored-by: Cursor <cursoragent@cursor.com>$/d' "$COMMIT_MSG_FILE"
+fi
